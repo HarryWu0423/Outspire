@@ -157,10 +157,11 @@ final class ClassActivityManager: ObservableObject {
     }
 
     private var retryCount = 0
+    private var isRegistering = false
     private static let maxRetries = 2
 
     private func registerIfReady() {
-        guard !hasRegistered,
+        guard !hasRegistered, !isRegistering,
               let startToken = lastPushStartToken,
               let updateToken = lastPushUpdateToken,
               !currentTimetable.isEmpty,
@@ -168,6 +169,7 @@ final class ClassActivityManager: ObservableObject {
               let studentInfo = StudentInfo(userCode: userCode)
         else { return }
 
+        isRegistering = true
         registerGeneration += 1
         let generation = registerGeneration
         let timetable = currentTimetable
@@ -179,7 +181,9 @@ final class ClassActivityManager: ObservableObject {
             timetable: timetable
         ) { [weak self] success in
             DispatchQueue.main.async {
-                guard let self, generation == self.registerGeneration else { return }
+                guard let self else { return }
+                self.isRegistering = false
+                guard generation == self.registerGeneration else { return }
                 if success {
                     self.hasRegistered = true
                     self.retryCount = 0
