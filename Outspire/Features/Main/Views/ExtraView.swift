@@ -31,6 +31,14 @@ struct ExtraView: View {
                     settingsRow("Settings", icon: "gear", color: .gray)
                 }
             }
+
+            #if DEBUG
+                Section("Debug") {
+                    NavigationLink(destination: LiveActivityDebugView()) {
+                        settingsRow("Live Activity Test", icon: "clock.badge.checkmark", color: .cyan)
+                    }
+                }
+            #endif
         }
         .listStyle(.insetGrouped)
         .applyScrollEdgeEffect()
