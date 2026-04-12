@@ -14,6 +14,9 @@
 		6ED03C042D84684000C81CF9 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6ED03C032D84684000C81CF9 /* UIKit.framework */; };
 		6ED03C082D846F2A00C81CF9 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6ED03C072D846F2A00C81CF9 /* CoreLocation.framework */; };
 		6ED03C0A2D846F5100C81CF9 /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6ED03C092D846F5100C81CF9 /* MapKit.framework */; };
+		6EF1D5892F8B9535003A053C /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6EF1D5882F8B9535003A053C /* WidgetKit.framework */; };
+		6EF1D58B2F8B9535003A053C /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6EF1D58A2F8B9535003A053C /* SwiftUI.framework */; };
+		6EF1D59C2F8B9536003A053C /* OutspireWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6EF1D5872F8B9535003A053C /* OutspireWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,7 +34,28 @@
 			remoteGlobalIDString = 6ED03A4F2D84647300C81CF9;
 			remoteInfo = Outspire;
 		};
+		6EF1D59A2F8B9536003A053C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6ED03A482D84647300C81CF9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6EF1D5862F8B9535003A053C;
+			remoteInfo = OutspireWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		6EF1D59D2F8B9536003A053C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				6EF1D59C2F8B9536003A053C /* OutspireWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		6ED03A502D84647300C81CF9 /* Outspire.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Outspire.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -41,6 +65,10 @@
 		6ED03C032D84684000C81CF9 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/iOSSupport/System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		6ED03C072D846F2A00C81CF9 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.2.sdk/System/Library/Frameworks/CoreLocation.framework; sourceTree = DEVELOPER_DIR; };
 		6ED03C092D846F5100C81CF9 /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.2.sdk/System/Library/Frameworks/MapKit.framework; sourceTree = DEVELOPER_DIR; };
+		6EF1D5872F8B9535003A053C /* OutspireWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OutspireWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6EF1D5882F8B9535003A053C /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		6EF1D58A2F8B9535003A053C /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		6EF1D5A22F8B955C003A053C /* OutspireWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OutspireWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -50,6 +78,13 @@
 				Info.plist,
 			);
 			target = 6ED03A4F2D84647300C81CF9 /* Outspire */;
+		};
+		6EF1D5A12F8B9536003A053C /* Exceptions for "OutspireWidget" folder in "OutspireWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 6EF1D5862F8B9535003A053C /* OutspireWidgetExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -70,6 +105,14 @@
 		6ED03A6E2D84647400C81CF9 /* OutspireUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = OutspireUITests;
+			sourceTree = "<group>";
+		};
+		6EF1D58C2F8B9535003A053C /* OutspireWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6EF1D5A12F8B9536003A053C /* Exceptions for "OutspireWidget" folder in "OutspireWidgetExtension" target */,
+			);
+			path = OutspireWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -103,15 +146,26 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6EF1D5842F8B9535003A053C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6EF1D58B2F8B9535003A053C /* SwiftUI.framework in Frameworks */,
+				6EF1D5892F8B9535003A053C /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		6ED03A472D84647300C81CF9 = {
 			isa = PBXGroup;
 			children = (
+				6EF1D5A22F8B955C003A053C /* OutspireWidgetExtension.entitlements */,
 				6ED03A522D84647300C81CF9 /* Outspire */,
 				6ED03A642D84647400C81CF9 /* OutspireTests */,
 				6ED03A6E2D84647400C81CF9 /* OutspireUITests */,
+				6EF1D58C2F8B9535003A053C /* OutspireWidget */,
 				6ED03BFA2D84662600C81CF9 /* Frameworks */,
 				6ED03A512D84647300C81CF9 /* Products */,
 			);
@@ -123,6 +177,7 @@
 				6ED03A502D84647300C81CF9 /* Outspire.app */,
 				6ED03A612D84647400C81CF9 /* OutspireTests.xctest */,
 				6ED03A6B2D84647400C81CF9 /* OutspireUITests.xctest */,
+				6EF1D5872F8B9535003A053C /* OutspireWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -134,6 +189,8 @@
 				6ED03C072D846F2A00C81CF9 /* CoreLocation.framework */,
 				6ED03C032D84684000C81CF9 /* UIKit.framework */,
 				6ED03BFB2D84662600C81CF9 /* UIKit.framework */,
+				6EF1D5882F8B9535003A053C /* WidgetKit.framework */,
+				6EF1D58A2F8B9535003A053C /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -148,10 +205,12 @@
 				6ED03A4C2D84647300C81CF9 /* Sources */,
 				6ED03A4D2D84647300C81CF9 /* Frameworks */,
 				6ED03A4E2D84647300C81CF9 /* Resources */,
+				6EF1D59D2F8B9536003A053C /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				6EF1D59B2F8B9536003A053C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				6ED03A522D84647300C81CF9 /* Outspire */,
@@ -213,6 +272,28 @@
 			productReference = 6ED03A6B2D84647400C81CF9 /* OutspireUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		6EF1D5862F8B9535003A053C /* OutspireWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6EF1D5A02F8B9536003A053C /* Build configuration list for PBXNativeTarget "OutspireWidgetExtension" */;
+			buildPhases = (
+				6EF1D5832F8B9535003A053C /* Sources */,
+				6EF1D5842F8B9535003A053C /* Frameworks */,
+				6EF1D5852F8B9535003A053C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6EF1D58C2F8B9535003A053C /* OutspireWidget */,
+			);
+			name = OutspireWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = OutspireWidgetExtension;
+			productReference = 6EF1D5872F8B9535003A053C /* OutspireWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -220,7 +301,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1620;
+				LastSwiftUpdateCheck = 2640;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					6ED03A4F2D84647300C81CF9 = {
@@ -233,6 +314,9 @@
 					6ED03A6A2D84647400C81CF9 = {
 						CreatedOnToolsVersion = 16.2;
 						TestTargetID = 6ED03A4F2D84647300C81CF9;
+					};
+					6EF1D5862F8B9535003A053C = {
+						CreatedOnToolsVersion = 26.4;
 					};
 				};
 			};
@@ -259,6 +343,7 @@
 				6ED03A4F2D84647300C81CF9 /* Outspire */,
 				6ED03A602D84647400C81CF9 /* OutspireTests */,
 				6ED03A6A2D84647400C81CF9 /* OutspireUITests */,
+				6EF1D5862F8B9535003A053C /* OutspireWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -279,6 +364,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		6ED03A692D84647400C81CF9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6EF1D5852F8B9535003A053C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -309,6 +401,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6EF1D5832F8B9535003A053C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -321,6 +420,11 @@
 			isa = PBXTargetDependency;
 			target = 6ED03A4F2D84647300C81CF9 /* Outspire */;
 			targetProxy = 6ED03A6C2D84647400C81CF9 /* PBXContainerItemProxy */;
+		};
+		6EF1D59B2F8B9536003A053C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6EF1D5862F8B9535003A053C /* OutspireWidgetExtension */;
+			targetProxy = 6EF1D59A2F8B9536003A053C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -454,7 +558,7 @@
 				CODE_SIGN_ENTITLEMENTS = Outspire/Outspire.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 66;
+				CURRENT_PROJECT_VERSION = 68;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Outspire/Preview Content\"";
 				DEVELOPMENT_TEAM = SEWGNELGY8;
@@ -497,6 +601,7 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.wrye.Outspire;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
 				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
 				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
@@ -524,7 +629,7 @@
 				CODE_SIGN_ENTITLEMENTS = Outspire/Outspire.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 66;
+				CURRENT_PROJECT_VERSION = 68;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Outspire/Preview Content\"";
 				DEVELOPMENT_TEAM = SEWGNELGY8;
@@ -567,6 +672,7 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.wrye.Outspire;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
 				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
 				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
@@ -590,7 +696,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 66;
+				CURRENT_PROJECT_VERSION = 68;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = SEWGNELGY8;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -615,7 +721,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 66;
+				CURRENT_PROJECT_VERSION = 68;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = SEWGNELGY8;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -639,7 +745,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 66;
+				CURRENT_PROJECT_VERSION = 68;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = SEWGNELGY8;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -663,7 +769,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 66;
+				CURRENT_PROJECT_VERSION = 68;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = SEWGNELGY8;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -680,6 +786,73 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = Outspire;
 				XROS_DEPLOYMENT_TARGET = 2.2;
+			};
+			name = Release;
+		};
+		6EF1D59E2F8B9536003A053C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = OutspireWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SEWGNELGY8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OutspireWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = OutspireWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.wrye.Outspire.OutspireWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		6EF1D59F2F8B9536003A053C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = OutspireWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SEWGNELGY8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OutspireWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = OutspireWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.wrye.Outspire.OutspireWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -718,6 +891,15 @@
 			buildConfigurations = (
 				6ED03A7C2D84647400C81CF9 /* Debug */,
 				6ED03A7D2D84647400C81CF9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6EF1D5A02F8B9536003A053C /* Build configuration list for PBXNativeTarget "OutspireWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6EF1D59E2F8B9536003A053C /* Debug */,
+				6EF1D59F2F8B9536003A053C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

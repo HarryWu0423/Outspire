@@ -1,18 +1,7 @@
-//
-//  AppIntent.swift
-//  OutspireWidget
-//
-//  Created by Alan Ye on 4/12/26.
-//
-
-import WidgetKit
 import AppIntents
+import WidgetKit
 
 struct ConfigurationAppIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource { "Configuration" }
-    static var description: IntentDescription { "This is an example widget." }
-
-    // An example configurable parameter.
-    @Parameter(title: "Favorite Emoji", default: "😃")
-    var favoriteEmoji: String
+    static var description: IntentDescription { "Configure Outspire widget." }
 }

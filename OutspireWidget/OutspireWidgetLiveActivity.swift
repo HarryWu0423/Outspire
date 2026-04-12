@@ -1,80 +1,255 @@
-//
-//  OutspireWidgetLiveActivity.swift
-//  OutspireWidget
-//
-//  Created by Alan Ye on 4/12/26.
-//
-
 import ActivityKit
-import WidgetKit
 import SwiftUI
+import WidgetKit
 
-struct OutspireWidgetAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
-        // Dynamic stateful properties about your activity go here!
-        var emoji: String
+// MARK: - Color Helpers
+
+private func stateColor(for state: ClassActivityAttributes.ContentState) -> Color {
+    switch state.status {
+    case .ongoing:
+        return SubjectColors.color(for: state.className)
+    case .ending:
+        return .orange
+    case .upcoming:
+        return .green
+    case .break:
+        return SubjectColors.color(for: state.nextClassName ?? state.className)
+    case .event:
+        return .purple
     }
-
-    // Fixed non-changing properties about your activity go here!
-    var name: String
 }
 
-struct OutspireWidgetLiveActivity: Widget {
-    var body: some WidgetConfiguration {
-        ActivityConfiguration(for: OutspireWidgetAttributes.self) { context in
-            // Lock screen/banner UI goes here
-            VStack {
-                Text("Hello \(context.state.emoji)")
-            }
-            .activityBackgroundTint(Color.cyan)
-            .activitySystemActionForegroundColor(Color.black)
+private func countdownColor(for state: ClassActivityAttributes.ContentState) -> Color {
+    switch state.status {
+    case .ongoing:
+        return .white
+    case .ending:
+        return .orange
+    case .upcoming, .break, .event:
+        return .white.opacity(0.4)
+    }
+}
 
-        } dynamicIsland: { context in
-            DynamicIsland {
-                // Expanded UI goes here.  Compose the expanded UI through
-                // various regions, like leading/trailing/center/bottom
-                DynamicIslandExpandedRegion(.leading) {
-                    Text("Leading")
+private func progressGradient(for state: ClassActivityAttributes.ContentState) -> LinearGradient {
+    let color = stateColor(for: state)
+    switch state.status {
+    case .ongoing, .ending, .event:
+        return LinearGradient(colors: [color, color.opacity(0.6)], startPoint: .leading, endPoint: .trailing)
+    case .upcoming, .break:
+        return LinearGradient(colors: [.clear], startPoint: .leading, endPoint: .trailing)
+    }
+}
+
+private func countdownLabel(for status: ClassActivityAttributes.ContentState.Status) -> String {
+    switch status {
+    case .ongoing, .ending:
+        return "ENDS IN"
+    case .upcoming, .break:
+        return "STARTS IN"
+    case .event:
+        return "TODAY"
+    }
+}
+
+private func progress(for state: ClassActivityAttributes.ContentState, at date: Date) -> Double {
+    let total = state.periodEnd.timeIntervalSince(state.periodStart)
+    guard total > 0 else { return 0 }
+    let elapsed = date.timeIntervalSince(state.periodStart)
+    return min(max(elapsed / total, 0), 1)
+}
+
+// MARK: - Lock Screen View
+
+private struct LockScreenView: View {
+    let state: ClassActivityAttributes.ContentState
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(state.className)
+                        .font(WidgetFont.title())
+                        .tracking(-0.2)
+                        .foregroundStyle(stateColor(for: state))
+                        .lineLimit(1)
+
+                    Text(subtitle)
+                        .font(WidgetFont.caption())
+                        .tracking(0.5)
+                        .foregroundStyle(.white.opacity(0.4))
                 }
-                DynamicIslandExpandedRegion(.trailing) {
-                    Text("Trailing")
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(countdownLabel(for: state.status))
+                        .font(WidgetFont.caption())
+                        .tracking(0.5)
+                        .foregroundStyle(.white.opacity(0.4))
+                        .textCase(.uppercase)
+
+                    Text(timerInterval: state.periodStart ... state.periodEnd, countsDown: true)
+                        .font(WidgetFont.number())
+                        .tracking(-1)
+                        .foregroundStyle(countdownColor(for: state))
+                        .monospacedDigit()
+                        .frame(width: 90, alignment: .trailing)
                 }
-                DynamicIslandExpandedRegion(.bottom) {
-                    Text("Bottom \(context.state.emoji)")
-                    // more content
-                }
-            } compactLeading: {
-                Text("L")
-            } compactTrailing: {
-                Text("T \(context.state.emoji)")
-            } minimal: {
-                Text(context.state.emoji)
             }
-            .widgetURL(URL(string: "http://www.apple.com"))
-            .keylineTint(Color.red)
+
+            // Progress bar
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(.white.opacity(0.08))
+                        .frame(height: 3)
+
+                    TimelineView(.periodic(from: .now, by: 10)) { timeline in
+                        let prog = progress(for: state, at: timeline.date)
+                        Capsule()
+                            .fill(progressGradient(for: state))
+                            .frame(width: geo.size.width * prog, height: 3)
+                    }
+                }
+            }
+            .frame(height: 3)
+            .padding(.top, 12)
+        }
+        .padding(16)
+    }
+
+    private var subtitle: String {
+        switch state.status {
+        case .break:
+            return state.nextClassName.map { "Next: \($0)" } ?? ""
+        default:
+            return state.roomNumber.isEmpty ? "" : state.roomNumber
         }
     }
 }
 
-extension OutspireWidgetAttributes {
-    fileprivate static var preview: OutspireWidgetAttributes {
-        OutspireWidgetAttributes(name: "World")
+// MARK: - Dynamic Island Views
+
+private struct CompactLeadingView: View {
+    let state: ClassActivityAttributes.ContentState
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 10)) { timeline in
+            ProgressRing(
+                progress: progress(for: state, at: timeline.date),
+                color: stateColor(for: state)
+            )
+        }
     }
 }
 
-extension OutspireWidgetAttributes.ContentState {
-    fileprivate static var smiley: OutspireWidgetAttributes.ContentState {
-        OutspireWidgetAttributes.ContentState(emoji: "😀")
-     }
-     
-     fileprivate static var starEyes: OutspireWidgetAttributes.ContentState {
-         OutspireWidgetAttributes.ContentState(emoji: "🤩")
-     }
+private struct CompactTrailingView: View {
+    let state: ClassActivityAttributes.ContentState
+
+    var body: some View {
+        Text(timerInterval: state.periodStart ... state.periodEnd, countsDown: true)
+            .font(WidgetFont.number(size: 15))
+            .tracking(-0.5)
+            .foregroundStyle(stateColor(for: state))
+            .monospacedDigit()
+            .frame(width: 52, alignment: .trailing)
+    }
 }
 
-#Preview("Notification", as: .content, using: OutspireWidgetAttributes.preview) {
-   OutspireWidgetLiveActivity()
-} contentStates: {
-    OutspireWidgetAttributes.ContentState.smiley
-    OutspireWidgetAttributes.ContentState.starEyes
+private struct MinimalView: View {
+    let state: ClassActivityAttributes.ContentState
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 10)) { timeline in
+            ProgressRing(
+                progress: progress(for: state, at: timeline.date),
+                color: stateColor(for: state),
+                size: 22
+            )
+        }
+    }
+}
+
+private struct ExpandedView: View {
+    let state: ClassActivityAttributes.ContentState
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(state.className)
+                        .font(WidgetFont.title(size: 16))
+                        .tracking(-0.2)
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+
+                    if !state.roomNumber.isEmpty {
+                        Text(state.roomNumber)
+                            .font(WidgetFont.caption())
+                            .tracking(0.5)
+                            .foregroundStyle(.white.opacity(0.4))
+                    }
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(countdownLabel(for: state.status))
+                        .font(WidgetFont.caption())
+                        .tracking(0.5)
+                        .foregroundStyle(.white.opacity(0.4))
+                        .textCase(.uppercase)
+
+                    Text(timerInterval: state.periodStart ... state.periodEnd, countsDown: true)
+                        .font(WidgetFont.number(size: 28))
+                        .tracking(-1)
+                        .foregroundStyle(stateColor(for: state))
+                        .monospacedDigit()
+                }
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(.white.opacity(0.08))
+                        .frame(height: 3)
+
+                    TimelineView(.periodic(from: .now, by: 10)) { timeline in
+                        let prog = progress(for: state, at: timeline.date)
+                        Capsule()
+                            .fill(progressGradient(for: state))
+                            .frame(width: geo.size.width * prog, height: 3)
+                    }
+                }
+            }
+            .frame(height: 3)
+            .padding(.top, 12)
+        }
+        .padding(.horizontal, 4)
+    }
+}
+
+// MARK: - Widget Configuration
+
+struct OutspireWidgetLiveActivity: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: ClassActivityAttributes.self) { context in
+            LockScreenView(state: context.state)
+                .activityBackgroundTint(Color(red: 0.11, green: 0.11, blue: 0.12))
+                .activitySystemActionForegroundColor(.white)
+        } dynamicIsland: { context in
+            DynamicIsland {
+                DynamicIslandExpandedRegion(.bottom) {
+                    ExpandedView(state: context.state)
+                }
+            } compactLeading: {
+                CompactLeadingView(state: context.state)
+            } compactTrailing: {
+                CompactTrailingView(state: context.state)
+            } minimal: {
+                MinimalView(state: context.state)
+            }
+            .widgetURL(URL(string: "outspire://today"))
+        }
+    }
 }

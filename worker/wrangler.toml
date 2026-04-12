@@ -1,0 +1,15 @@
+name = "outspire-push"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[[kv_namespaces]]
+binding = "OUTSPIRE_KV"
+id = "PLACEHOLDER_KV_ID"
+
+[triggers]
+crons = ["50 22 * * *", "* * * * *"]
+
+[vars]
+GITHUB_CALENDAR_URL = "https://raw.githubusercontent.com/Computerization/Outspire/main/calendar"
+HOLIDAY_CN_URL = "https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master"
+APNS_BUNDLE_ID = "dev.wrye.Outspire"

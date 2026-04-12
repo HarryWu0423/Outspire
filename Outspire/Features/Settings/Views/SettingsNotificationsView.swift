@@ -28,6 +28,21 @@ struct SettingsNotificationsView: View {
                     .font(.footnote)
                     .foregroundColor(.secondary)
             }
+
+            Section {
+                Toggle(isOn: Binding(
+                    get: { UserDefaults.standard.bool(forKey: "liveActivityEnabled") },
+                    set: { UserDefaults.standard.set($0, forKey: "liveActivityEnabled") }
+                )) {
+                    Label("Live Activity", systemImage: "clock.badge.checkmark")
+                }
+            } header: {
+                Text("Lock Screen")
+            } footer: {
+                Text("Show class countdown on your Lock Screen and Dynamic Island. Starts automatically before your first class.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
         }
         .navigationTitle("Notifications")
         .contentMargins(.vertical, 10.0)
