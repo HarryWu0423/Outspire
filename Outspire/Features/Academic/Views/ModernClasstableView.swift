@@ -70,6 +70,7 @@ struct ModernClasstableView: View {
         }
         .appBackground()
         .navigationTitle("Class")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Today") {
@@ -140,27 +141,25 @@ struct ModernClasstableView: View {
                     VStack(spacing: 4) {
                         Text(isSelected ? fullDayNames[index] : dayNames[index])
                             .font(.caption2.weight(isSelected ? .bold : .medium))
-                            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                            .foregroundStyle(isSelected ? Color.primary : Color.secondary)
 
                         if index < dates.count {
                             Text(fmt.string(from: dates[index]))
                                 .font(.system(.body, design: .rounded).weight(isSelected ? .bold : .medium))
-                                .foregroundStyle(isSelected ? .white : (isToday ? Color.accentColor : .primary))
+                                .foregroundStyle(isSelected ? .white : (isToday ? Color.primary : .primary))
                                 .frame(width: 36, height: 36)
                                 .background {
                                     if isSelected {
                                         Circle()
-                                            .fill(Color.accentColor)
-                                            .shadow(color: Color.accentColor.opacity(0.3), radius: 6, y: 3)
+                                            .fill(Color.primary)
                                     } else if isToday {
                                         Circle()
-                                            .strokeBorder(Color.accentColor, lineWidth: 1.5)
+                                            .strokeBorder(Color.primary.opacity(0.3), lineWidth: 1.5)
                                     }
                                 }
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .animation(.easeInOut(duration: 0.2), value: selectedDay)
                 }
                 .buttonStyle(.plain)
             }

@@ -56,8 +56,8 @@ struct SettingsView: View {
                                 )
                         }
                         Spacer()
-                        Image(systemName: "arrow.up.forward.square")
-                            .font(.caption.weight(.medium))
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2.weight(.semibold))
                             .foregroundColor(AppColor.brand)
                     }
                 }
@@ -74,6 +74,28 @@ struct SettingsView: View {
                                 .frame(width: 30, height: 30)
                                 .background(
                                     Color.indigo.gradient,
+                                    in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                )
+                        }
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(AppColor.brand)
+                    }
+                }
+
+                Link(destination: URL(string: "https://discord.gg/outspire")!) {
+                    HStack {
+                        Label {
+                            Text("Discord")
+                                .foregroundStyle(.primary)
+                        } icon: {
+                            Image(systemName: "ellipsis.bubble.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 30, height: 30)
+                                .background(
+                                    Color.purple.gradient,
                                     in: RoundedRectangle(cornerRadius: 7, style: .continuous)
                                 )
                         }
@@ -106,6 +128,7 @@ struct SettingsView: View {
                     }
                 }
             }
+            .tint(.primary)
 
             #if DEBUG
                 Section("Debug Tools") {
