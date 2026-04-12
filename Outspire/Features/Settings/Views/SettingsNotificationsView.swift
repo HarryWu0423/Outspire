@@ -43,6 +43,24 @@ struct SettingsNotificationsView: View {
                     .font(.footnote)
                     .foregroundColor(.secondary)
             }
+
+            Section {
+                Toggle(isOn: Binding(
+                    get: { UserDefaults.standard.bool(forKey: "classRemindersEnabled") },
+                    set: {
+                        UserDefaults.standard.set($0, forKey: "classRemindersEnabled")
+                        NotificationManager.shared.handleNotificationSettingsChange()
+                    }
+                )) {
+                    Label("Class Reminders", systemImage: "bell.badge")
+                }
+            } header: {
+                Text("Reminders")
+            } footer: {
+                Text("Get notified 5 minutes before each class starts.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
         }
         .navigationTitle("Notifications")
         .contentMargins(.vertical, 10.0)

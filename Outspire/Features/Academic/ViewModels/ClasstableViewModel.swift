@@ -122,6 +122,9 @@ class ClasstableViewModel: ObservableObject {
 
             // Share with widget
             WidgetDataManager.updateTimetable(timetable)
+
+            // Schedule class reminders
+            NotificationManager.shared.scheduleClassReminders(from: timetable)
         }
     }
 
