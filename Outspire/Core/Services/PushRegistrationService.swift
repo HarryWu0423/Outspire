@@ -3,8 +3,7 @@ import OSLog
 
 /// Sends push tokens and schedule data to the CF Worker for Live Activity push delivery.
 enum PushRegistrationService {
-    // TODO: Replace with your actual CF Worker URL after deployment
-    private static let workerBaseURL = "https://outspire-push.wrye.dev"
+    private static let workerBaseURL = "https://outspire-apns.wrye.dev"
 
     struct RegisterPayload: Encodable {
         let pushStartToken: String
