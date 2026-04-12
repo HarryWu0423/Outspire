@@ -135,8 +135,13 @@ struct ClassWidgetProvider: TimelineProvider {
 
             let components = cellData.components(separatedBy: "\n")
             let teacher = components.count > 0 ? components[0] : ""
-            let subject = components.count > 1 ? components[1] : ""
+            let rawSubject = components.count > 1 ? components[1] : ""
             let room = components.count > 2 ? components[2] : ""
+
+            // Strip trailing class number like "(8)" from "Mathematics(8)"
+            let subject = rawSubject.replacingOccurrences(
+                of: "\\(\\d+\\)$", with: "", options: .regularExpression
+            )
 
             result.append(ScheduledClass(
                 periodNumber: row,

@@ -84,6 +84,9 @@ struct TodayView: View {
         .onChange(of: classtableViewModel.isLoadingTimetable) { _, isLoading in
             self.isLoading = isLoading
         }
+        .onChange(of: classtableViewModel.timetable) { _, timetable in
+            startLiveActivityIfNeeded(timetable: timetable)
+        }
         .onChange(of: authV2.isAuthenticated) { _, isAuthenticated in
             handleAuthChange(isAuthenticated)
             updateGradientColors()
@@ -667,4 +670,48 @@ struct TodayView: View {
         return classChangeMinutes.contains(currentMinute) && currentSecond == 0
     }
 
+    // MARK: - Live Activity
+
+    private func startLiveActivityIfNeeded(timetable: [[String]]) {
+        guard !timetable.isEmpty,
+              !isHolidayActive(),
+              !ClassActivityManager.shared.isActivityRunning,
+              effectiveDayIndex >= 0, effectiveDayIndex < 5
+        else { return }
+
+        let periods = ClassPeriodsManager.shared.classPeriods
+        let now = Date()
+        let dayColumn = effectiveDayIndex + 1
+
+        var schedule: [ScheduledClass] = []
+        for row in 1 ..< timetable.count {
+            guard dayColumn < timetable[row].count else { continue }
+            let cellData = timetable[row][dayColumn]
+            let trimmed = cellData.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+
+            guard let period = periods.first(where: { $0.number == row }) else { continue }
+
+            let components = cellData.components(separatedBy: "\n")
+            let subject = (components.count > 1 ? components[1] : components[0])
+                .replacingOccurrences(of: "\\(\\d+\\)$", with: "", options: .regularExpression)
+            let room = components.count > 2 ? components[2] : ""
+            let teacher = components.count > 0 ? components[0] : ""
+
+            schedule.append(ScheduledClass(
+                periodNumber: row,
+                className: subject.isEmpty ? "Self-Study" : subject,
+                roomNumber: room,
+                teacherName: teacher,
+                startTime: period.startTime,
+                endTime: period.endTime,
+                isSelfStudy: false
+            ))
+        }
+
+        // Only start if there are still upcoming/active classes
+        guard schedule.contains(where: { $0.endTime > now }) else { return }
+
+        ClassActivityManager.shared.startActivity(schedule: schedule)
+    }
 }

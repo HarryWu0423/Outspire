@@ -5,7 +5,6 @@ import WidgetKit
 struct OutspireWidgetBundle: WidgetBundle {
     var body: some Widget {
         SmallClassWidget()
-        MediumTimelineWidget()
         OutspireWidgetLiveActivity()
     }
 }
