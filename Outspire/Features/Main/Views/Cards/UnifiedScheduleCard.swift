@@ -87,15 +87,6 @@ struct UnifiedScheduleCard: View {
                         .foregroundStyle(.white.opacity(0.75))
                 }
                 Spacer()
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        isExpanded.toggle()
-                    }
-                } label: {
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                }
             }
             .padding(.horizontal, 22)
             .padding(.vertical, 16)
@@ -144,6 +135,48 @@ struct UnifiedScheduleCard: View {
             }
             .frame(maxHeight: isExpanded ? .none : collapsedHeight)
             .clipped()
+
+            // Fade hint and expand button at bottom
+            if !isExpanded && scheduledPeriods.count > 3 {
+                VStack(spacing: 8) {
+                    LinearGradient(
+                        colors: [.clear, .black.opacity(0.3)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 30)
+
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            isExpanded.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("Show more")
+                                .font(.subheadline.weight(.medium))
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.secondary)
+                    }
+                    .padding(.bottom, 8)
+                }
+            } else if isExpanded && scheduledPeriods.count > 3 {
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("Show less")
+                            .font(.subheadline.weight(.medium))
+                        Image(systemName: "chevron.up")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                .padding(.bottom, 12)
+            }
         }
         .background(
             shape.fill(colorScheme == .dark ? AppColor.richDarkCard : .white)
