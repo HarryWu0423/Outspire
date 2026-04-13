@@ -67,7 +67,7 @@ struct NoClassCard: View {
                 .rotationEffect(.degrees(isDimmed ? 0 : -15))
                 .offset(x: 10, y: -6)
         }
-        .frame(height: 60)
+        .frame(height: 70)
         .coloredRichCard(colors: gradientColors)
     }
 }
