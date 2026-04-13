@@ -113,54 +113,55 @@ struct UnifiedScheduleCard: View {
                 }
             )
 
-            // Period rows on subtly tinted surface
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                VStack(spacing: 0) {
-                    ForEach(displayedPeriods) { item in
-                        let isActive = (isForToday || setAsToday)
-                            && isItemActive(item, at: context.date)
-                        let isPast = (isForToday || setAsToday)
-                            && isItemPast(item, at: context.date) && !isActive
-
-                        UnifiedScheduleRow(
-                            item: item,
-                            isActive: isActive,
-                            isPast: isPast,
-                            currentDate: context.date,
-                            accentColor: accentColor
-                        )
-                    }
-                }
-                .padding(.vertical, 8)
-            }
-            .frame(maxHeight: isExpanded ? .none : collapsedHeight)
-            .clipped()
-
-            // Fade hint and expand button at bottom
+            // Period rows with fade overlay when collapsed
             if !isExpanded && scheduledPeriods.count > 3 {
-                VStack(spacing: 8) {
-                    LinearGradient(
-                        colors: [.clear, .black.opacity(0.15)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 24)
+                // Collapsed: show fade hint
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    VStack(spacing: 0) {
+                        ForEach(displayedPeriods) { item in
+                            let isActive = (isForToday || setAsToday)
+                                && isItemActive(item, at: context.date)
+                            let isPast = (isForToday || setAsToday)
+                                && isItemPast(item, at: context.date) && !isActive
 
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            isExpanded.toggle()
+                            UnifiedScheduleRow(
+                                item: item,
+                                isActive: isActive,
+                                isPast: isPast,
+                                currentDate: context.date,
+                                accentColor: accentColor
+                            )
                         }
-                    } label: {
-                        Label("Show more", systemImage: "chevron.down")
-                            .font(.subheadline.weight(.medium))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.accentColor.opacity(0.1))
-                            .clipShape(Capsule())
                     }
-                    .buttonStyle(.plain)
-                    .padding(.bottom, 8)
+                    .padding(.vertical, 8)
                 }
+                .frame(maxHeight: collapsedHeight)
+                .mask(
+                    VStack(spacing: 0) {
+                        Spacer()
+                        LinearGradient(
+                            colors: [.clear, .white],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height: 40)
+                    }
+                )
+
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isExpanded.toggle()
+                    }
+                } label: {
+                    Label("Show more", systemImage: "chevron.down")
+                        .font(.subheadline.weight(.medium))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.accentColor.opacity(0.1))
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.bottom, 8)
             } else if isExpanded && scheduledPeriods.count > 3 {
                 Button {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
