@@ -1,0 +1,22 @@
+# Outspire 项目更新记录
+
+这是一个 iOS/macOS 校园伴侣应用，使用 SwiftUI 开发。
+
+## 主要功能模块
+- **Today Dashboard**: 课程倒计时、学校日信息、天气、快速链接
+- **Academics**: 互动课程表、成绩查看器、Live Activities & widgets
+- **CAS**: 社团信息、活动记录、反思与学习成果跟踪
+- **School Life**: 每周安排、午餐菜单
+- **Deep Linking**: URL schemes 和 universal links
+
+## 架构概览
+- App入口: OutspireApp.swift
+- 主Tab: RootTabView.swift (支持 iOS 26+/18+/legacy 三种版本)
+- 服务层: SessionService, AuthServiceV2, NetworkService, TSIMSClientV2
+- 认证: 支持旧版 TSIMS 和新版 TSIMS V2 (ASP.NET MVC)
+
+## 更新记录
+1. 创建项目理解文档
+2. 配置 DeepSeek API: 创建 Configurations.local.swift，添加 apiKey 和 baseURL，将模型改为 deepseek/deepseek-chat
+3. 修改 Today 页面未登录时按钮行为：从跳转到 SettingsView 改为直接跳转到 AccountV2View（登录页面）
+4. 从 Today 进入登录页面时，登录成功后自动返回 Today（通过 autoDismissOnLogin 参数控制）

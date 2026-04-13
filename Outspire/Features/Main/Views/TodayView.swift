@@ -1,0 +1,679 @@
+import Foundation
+import SwiftUI
+
+// Removed ColorfulX usage in favor of system materials
+
+struct TodayView: View {
+    // MARK: - Environment & State
+
+    @EnvironmentObject var sessionService: SessionService
+    @StateObject private var classtableViewModel = ClasstableViewModel()
+    @ObservedObject private var authV2 = AuthServiceV2.shared
+    @EnvironmentObject var urlSchemeHandler: URLSchemeHandler
+    @EnvironmentObject var gradientManager: GradientManager
+
+    @State private var currentTime = Date()
+    @State private var timer: Timer?
+    @State private var isLoading = false
+    @State private var animateCards = false
+    @State private var selectedDayOverride: Int? = Configuration.selectedDayOverride
+    @State private var isHolidayMode: Bool = Configuration.isHolidayMode
+    @State private var isSettingsSheetPresented: Bool = false
+    @State private var holidayEndDate: Date = Configuration.holidayEndDate
+    @State private var holidayHasEndDate: Bool = Configuration.holidayHasEndDate
+    @State private var setAsToday: Bool = Configuration.setAsToday
+    @State private var forceUpdate: Bool = false
+
+    @AppStorage("hasShownScheduleTip") private var hasShownScheduleTip: Bool = false
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    // MARK: - Body
+
+    var body: some View {
+        ScrollView {
+            contentView
+        }
+        // Use inline title and a custom principal area to show a subtitle date
+        .navigationBarTitleDisplayMode(.inline)
+        .applyScrollEdgeEffect()
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                VStack(spacing: 0) {
+                    Text(greeting)
+                        .font(AppText.body.weight(.bold))
+                    Text(formattedDate)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    if let statusText = toolbarStatusText {
+                        Text(statusText)
+                            .font(AppText.caption.weight(.medium))
+                            .foregroundStyle(toolbarStatusColor)
+                    }
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                scheduleButton
+            }
+        }
+        .sheet(
+            isPresented: $isSettingsSheetPresented,
+            onDismiss: {
+                updateGradientColors()
+            }
+        ) {
+            scheduleSettingsSheet
+                .environmentObject(sessionService)
+        }
+        .onAppear {
+            setupOnAppear()
+            updateGradientColors()
+
+            if urlSchemeHandler.navigateToToday {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    urlSchemeHandler.navigateToToday = false
+                }
+            }
+        }
+        .onDisappear {
+            saveSettings()
+            timer?.invalidate()
+            timer = nil
+        }
+        .onChange(of: classtableViewModel.years) { _, years in
+            handleYearsChange(years)
+        }
+        .onChange(of: classtableViewModel.isLoadingTimetable) { _, isLoading in
+            self.isLoading = isLoading
+        }
+        .onChange(of: sessionService.isAuthenticated) { _, isAuthenticated in
+            handleAuthChange(isAuthenticated)
+            updateGradientColors() // Update gradient when authentication changes
+        }
+        .onChange(of: authV2.isAuthenticated) { _, isAuthenticated in
+            handleAuthChange(isAuthenticated)
+            updateGradientColors()
+        }
+        .onChange(of: selectedDayOverride) { _, newValue in
+            Configuration.selectedDayOverride = newValue
+            updateGradientColors()
+            if timer == nil {
+                currentTime = Date()
+            }
+        }
+        .onChange(of: setAsToday) { _, newValue in
+            Configuration.setAsToday = newValue
+        }
+        .onChange(of: isHolidayMode) { _, newValue in
+            Configuration.isHolidayMode = newValue
+            updateGradientColors()
+        }
+        .onChange(of: holidayHasEndDate) { _, newValue in
+            Configuration.holidayHasEndDate = newValue
+        }
+        .onChange(of: holidayEndDate) { _, newValue in
+            Configuration.holidayEndDate = newValue
+        }
+        .onChange(of: colorScheme) { _, _ in
+            updateGradientColors()
+        }
+        .environment(\.colorScheme, colorScheme)
+    }
+
+    // MARK: - Gradient Methods
+
+    private func updateGradientColors() {
+        if !isAuthenticated {
+            gradientManager.updateGradientForContext(
+                context: .notSignedIn, colorScheme: colorScheme
+            )
+            return
+        }
+
+        if isHolidayActive() {
+            gradientManager.updateGradientForContext(context: .holiday, colorScheme: colorScheme)
+            return
+        }
+
+        if isCurrentDateWeekend() {
+            gradientManager.updateGradientForContext(context: .weekend, colorScheme: colorScheme)
+            return
+        }
+
+        if let upcomingInfo = upcomingClassInfo {
+            let isSelfStudy = upcomingInfo.classData.contains("Self-Study")
+            let isActive = upcomingInfo.period.isCurrentlyActive()
+
+            if isActive {
+                if isSelfStudy {
+                    gradientManager.updateGradientForContext(
+                        context: .inSelfStudy, colorScheme: colorScheme
+                    )
+                } else {
+                    gradientManager.updateGradientForContext(
+                        context: .inClass(subject: upcomingInfo.classData),
+                        colorScheme: colorScheme
+                    )
+                }
+            } else {
+                if isSelfStudy {
+                    gradientManager.updateGradientForContext(
+                        context: .upcomingSelfStudy, colorScheme: colorScheme
+                    )
+                } else {
+                    gradientManager.updateGradientForContext(
+                        context: .upcomingClass(subject: upcomingInfo.classData),
+                        colorScheme: colorScheme
+                    )
+                }
+            }
+        } else {
+            gradientManager.updateGradientForContext(
+                context: .afterSchool, colorScheme: colorScheme
+            )
+        }
+    } // Removed custom navigation bar appearance to align with Liquid Glass defaults\n
+    private func saveSettings() {
+        Configuration.selectedDayOverride = selectedDayOverride
+        Configuration.setAsToday = setAsToday
+        Configuration.isHolidayMode = isHolidayMode
+        Configuration.holidayHasEndDate = holidayHasEndDate
+        Configuration.holidayEndDate = holidayEndDate
+    }
+
+    // MARK: - Components
+
+    private var contentView: some View {
+        VStack(spacing: 20) {
+            mainContentView
+            Spacer(minLength: 60)
+        }
+        .padding(.top, 10)
+    }
+
+    private var scheduleButton: some View {
+        Button {
+            HapticManager.shared.playButtonTap()
+            isSettingsSheetPresented = true
+        } label: {
+            Image(systemName: "ellipsis")
+                .symbolRenderingMode(.hierarchical)
+        }
+        .disabled(!isAuthenticated)
+        .opacity(isAuthenticated ? 1.0 : 0.5)
+    }
+
+    private var scheduleSettingsSheet: some View {
+        ScheduleSettingsSheet(
+            selectedDay: $selectedDayOverride,
+            setAsToday: $setAsToday,
+            isHolidayMode: $isHolidayMode,
+            isPresented: $isSettingsSheetPresented,
+            holidayEndDate: $holidayEndDate,
+            holidayHasEndDate: $holidayHasEndDate
+        )
+        .presentationDetents([.medium, .large])
+    }
+
+    // MARK: - Subviews
+
+    private var mainContentView: some View {
+        TodayMainContentView(
+            isAuthenticated: isAuthenticated,
+            isHolidayActive: isHolidayActive(),
+            isLoading: isLoading,
+            upcomingClassInfo: upcomingClassInfo,
+            assemblyTime: assemblyTime,
+            arrivalTime: arrivalTime,
+            isCurrentDateWeekend: isCurrentDateWeekend(),
+            isHolidayMode: isHolidayMode,
+            holidayHasEndDate: holidayHasEndDate,
+            holidayEndDate: holidayEndDate,
+            classtableViewModel: classtableViewModel,
+            effectiveDayIndex: effectiveDayIndex,
+            currentTime: currentTime,
+            setAsToday: setAsToday,
+            selectedDayOverride: selectedDayOverride,
+            animateCards: animateCards,
+            effectiveDate: effectiveDateForSelectedDay
+        )
+    }
+
+    // MARK: - Computed Properties
+
+    private var toolbarStatusText: String? {
+        if let override = selectedDayOverride {
+            return "Viewing \(TodayViewHelpers.weekdayName(for: override + 1))'s schedule"
+        } else if isHolidayActive(), holidayHasEndDate {
+            return "Holiday until \(holidayEndDateString)"
+        } else if isHolidayMode {
+            return "Holiday Mode"
+        }
+        return nil
+    }
+
+    private var toolbarStatusColor: Color {
+        if selectedDayOverride != nil { return AppColor.brand }
+        if isHolidayActive() || isHolidayMode { return .orange }
+        return .secondary
+    }
+
+    private var formattedDate: String {
+        TodayViewHelpers.formatDateString(currentTime)
+    }
+
+    var greeting: String {
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: currentTime)
+        switch hour {
+        case 6 ..< 12: return "Good Morning"
+        case 12 ..< 18: return "Good Afternoon"
+        default: return "Good Evening"
+        }
+    }
+
+    private var effectiveDayIndex: Int {
+        if isHolidayActive() {
+            return -1
+        }
+        if let override = selectedDayOverride {
+            return override
+        } else {
+            let calendar = Calendar.current
+            let weekday = calendar.component(.weekday, from: currentTime)
+            return (weekday == 1 || weekday == 7) ? -1 : weekday - 2
+        }
+    }
+
+    private var isAuthenticated: Bool {
+        AuthServiceV2.shared.isAuthenticated || sessionService.isAuthenticated
+    }
+
+    private var assemblyTime: String {
+        let dayIndex = effectiveDayIndex
+        if dayIndex == 0 {
+            return "7:45 - 8:05"
+        } // Monday
+        else if dayIndex >= 1 && dayIndex <= 4 {
+            return "7:55 - 8:05"
+        } // Tues - Fri
+        else {
+            return "No assembly"
+        }
+    }
+
+    private var arrivalTime: String {
+        let dayIndex = effectiveDayIndex
+        if dayIndex == 0 {
+            return "before 7:45"
+        } // Monday
+        else if dayIndex >= 1 && dayIndex <= 4 {
+            return "before 7:55"
+        } // Tues - Fri
+        else {
+            return "No arrival requirement"
+        }
+    }
+
+    var upcomingClassInfo:
+        (period: ClassPeriod, classData: String, dayIndex: Int, isForToday: Bool)?
+    {
+        guard !classtableViewModel.timetable.isEmpty else { return nil }
+
+        let calendar = Calendar.current
+        let now = Date()
+        let currentWeekday = calendar.component(.weekday, from: now)
+        let isForToday = selectedDayOverride == nil
+        let isWeekendToday = (currentWeekday == 1 || currentWeekday == 7)
+        let dayIndex = effectiveDayIndex
+
+        if isHolidayActive() { return nil }
+        if isForToday && isWeekendToday && Configuration.showMondayClass {
+            return getNextClassForDay(0, isForToday: false)
+        }
+        if dayIndex < 0 || dayIndex >= 5 { return nil }
+
+        // Calculate class info with accurate time context
+        // This ensures we get the right class period without causing unnecessary updates
+        return getNextClassForDay(dayIndex, isForToday: isForToday)
+    }
+
+    private var holidayEndDateString: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: holidayEndDate)
+    }
+
+    private var effectiveDateForSelectedDay: Date? {
+        guard setAsToday, let override = selectedDayOverride else { return nil }
+
+        let calendar = Calendar.current
+        let now = Date()
+        let currentWeekday = calendar.component(.weekday, from: now)
+
+        // Calculate target weekday (1 = Sunday, 2 = Monday, etc.)
+        // Our override is 0-based (0 = Monday), so we need to add 2
+        let targetWeekday = override + 2
+
+        // If it's the same day of the week, just use today's date
+        // This prevents the "next week" issue when selecting current weekday
+        if targetWeekday == currentWeekday {
+            return now
+        }
+
+        // Calculate days to add/subtract to get from current weekday to target weekday
+        var daysToAdd = targetWeekday - currentWeekday
+
+        // Adjust to get the closest occurrence (past or future)
+        if daysToAdd > 3 {
+            daysToAdd -= 7 // Go back a week if more than 3 days ahead
+        } else if daysToAdd < -3 {
+            daysToAdd += 7 // Go forward a week if more than 3 days behind
+        }
+
+        // Create a new date that represents the target weekday but with current time
+        return calendar.date(byAdding: .day, value: daysToAdd, to: now)
+    }
+
+    // MARK: - Helper Methods
+
+    private func setupOnAppear() {
+        checkForDateChange()
+
+        // Ensure that on first app launch we're not selecting any specific day
+        if AnimationManager.shared.isFirstLaunch {
+            selectedDayOverride = nil
+            setAsToday = false
+            Configuration.selectedDayOverride = nil
+            Configuration.setAsToday = false
+        }
+
+        if sessionService.isAuthenticated && sessionService.userInfo == nil {
+            sessionService.fetchUserInfo { _, _ in }
+        }
+        let isTSIMSAuthed = AuthServiceV2.shared.isAuthenticated || sessionService.isAuthenticated
+        if isTSIMSAuthed {
+            // Check if we have valid cached data first
+            let cacheStatus = classtableViewModel.getCacheStatus()
+            if !cacheStatus.hasValidYearsCache || !cacheStatus.hasValidTimetableCache {
+                isLoading = true
+                classtableViewModel.fetchYears()
+            } else {
+                // Use cached data, no loading needed
+                isLoading = false
+            }
+        } else {
+            // Attempt to restore TSIMS v2 session on cold start to avoid flashing signed-out UI
+            isLoading = true
+            AuthServiceV2.shared.refreshSessionDetailed { result in
+                let authed: Bool
+                switch result {
+                case .valid, .reauthed: authed = true
+                default: authed = false
+                }
+                if authed {
+                    // Proceed with timetable loading if needed
+                    let cacheStatus = self.classtableViewModel.getCacheStatus()
+                    if !cacheStatus.hasValidYearsCache || !cacheStatus.hasValidTimetableCache {
+                        self.classtableViewModel.fetchYears()
+                    }
+                }
+                self.isLoading = false
+            }
+        }
+
+        // Timer to update current time - optimized to reduce unnecessary refreshes
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            // Only update the time
+            self.currentTime = Date()
+
+            // Reduced frequency check for class transitions and weather
+            let second = Calendar.current.component(.second, from: self.currentTime)
+
+            // Only check for transitions every 10 seconds to reduce processing
+            if second % 10 == 0 {
+                if self.checkForClassTransition() {
+                    self.forceContentRefresh()
+                }
+            }
+
+            // Removed frequent weather refresh to prevent the weird issue :(
+            // Weather now updates only on location change or onAppear :(
+        }
+
+        animateCards = true
+        AnimationManager.shared.markAppLaunched()
+    }
+
+    // Check if we need to reset the selected day override
+    private func checkForDateChange() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        if let lastLaunch = Configuration.lastAppLaunchDate {
+            let lastLaunchDay = calendar.startOfDay(for: lastLaunch)
+
+            // Reset settings if this is a new day
+            if !calendar.isDate(today, inSameDayAs: lastLaunchDay) {
+                selectedDayOverride = nil
+                setAsToday = false
+                Configuration.selectedDayOverride = nil
+                Configuration.setAsToday = false
+            }
+        }
+
+        // Update last app launch date
+        Configuration.lastAppLaunchDate = Date()
+    }
+
+    private func handleYearsChange(_ years: [Year]) {
+        if !years.isEmpty, !classtableViewModel.selectedYearId.isEmpty {
+            // Check if we need to fetch or if we have valid cache
+            let cacheStatus = classtableViewModel.getCacheStatus()
+            if !cacheStatus.hasValidTimetableCache {
+                classtableViewModel.fetchTimetable()
+            }
+        } else if !years.isEmpty {
+            classtableViewModel.selectYear(years.first!.W_YearID)
+        }
+    }
+
+    private func handleAuthChange(_ isAuthenticated: Bool) {
+        if !isAuthenticated {
+            classtableViewModel.timetable = []
+
+            // Reset all schedule settings when logged out
+            selectedDayOverride = nil
+            setAsToday = false
+            isHolidayMode = false
+
+            // Also reset in Configuration to ensure persistence
+            Configuration.selectedDayOverride = nil
+            Configuration.setAsToday = false
+            Configuration.isHolidayMode = false
+
+            // No animation when switching between views
+            animateCards = true
+        }
+    }
+
+    // Update the getNextClassForDay function to handle self-study periods
+    private func getNextClassForDay(_ dayIndex: Int, isForToday: Bool) -> (
+        period: ClassPeriod, classData: String, dayIndex: Int, isForToday: Bool
+    )? {
+        // If we're using "Set as Today" mode with a selected day
+        if setAsToday, selectedDayOverride != nil {
+            let periodInfo = ClassPeriodsManager.shared.getCurrentOrNextPeriod(
+                useEffectiveDate: true,
+                effectiveDate: effectiveDateForSelectedDay
+            )
+            return getClassForPeriod(periodInfo, dayIndex: dayIndex, isForToday: true)
+        }
+        // Normal "today" mode
+        else if isForToday {
+            let periodInfo = ClassPeriodsManager.shared.getCurrentOrNextPeriod()
+            return getClassForPeriod(periodInfo, dayIndex: dayIndex, isForToday: true)
+        }
+        // Preview mode for other days
+        else {
+            // Find the first class of the day when viewing other days
+            for row in 1 ..< classtableViewModel.timetable.count {
+                if row < classtableViewModel.timetable.count,
+                   dayIndex + 1 < classtableViewModel.timetable[row].count
+                {
+                    let classData = classtableViewModel.timetable[row][dayIndex + 1]
+                    let isSelfStudy = classData.trimmingCharacters(in: .whitespacesAndNewlines)
+                        .isEmpty
+
+                    if let period = ClassPeriodsManager.shared.classPeriods.first(where: {
+                        $0.number == row
+                    }) {
+                        // For self-study periods, we still show the period but mark it as self-study
+                        if isSelfStudy {
+                            return (
+                                period: period, classData: "You\nSelf-Study", dayIndex: dayIndex,
+                                isForToday: false
+                            )
+                        } else {
+                            return (
+                                period: period, classData: classData, dayIndex: dayIndex,
+                                isForToday: false
+                            )
+                        }
+                    }
+                }
+            }
+            return nil
+        }
+    }
+
+    private func getClassForPeriod(
+        _ periodInfo: (period: ClassPeriod?, isCurrentlyActive: Bool),
+        dayIndex: Int, isForToday: Bool
+    ) -> (period: ClassPeriod, classData: String, dayIndex: Int, isForToday: Bool)? {
+        guard let startPeriod = periodInfo.period else { return nil }
+        // Helper to check bounds and get data
+        func dataFor(periodNumber: Int) -> String? {
+            guard periodNumber < classtableViewModel.timetable.count,
+                  dayIndex + 1 < classtableViewModel.timetable[periodNumber].count else { return nil }
+            return classtableViewModel.timetable[periodNumber][dayIndex + 1]
+        }
+
+        // If today: if current period is active and empty, show Self-Study for that period.
+        // Otherwise (not currently active), look ahead to the next non-empty class.
+        if isForToday {
+            if periodInfo.isCurrentlyActive {
+                if let raw = dataFor(periodNumber: startPeriod.number) {
+                    let isEmpty = raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    let classData = isEmpty ? "You\nSelf-Study" : raw
+                    return (period: startPeriod, classData: classData, dayIndex: dayIndex, isForToday: isForToday)
+                } else {
+                    return (
+                        period: startPeriod,
+                        classData: "You\nSelf-Study",
+                        dayIndex: dayIndex,
+                        isForToday: isForToday
+                    )
+                }
+            } else {
+                // Find first non-empty future class at or after suggested period
+                let allPeriods = ClassPeriodsManager.shared.classPeriods.map { $0.number }
+                for p in allPeriods where p >= startPeriod.number {
+                    if let raw = dataFor(periodNumber: p) {
+                        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !trimmed.isEmpty {
+                            if let periodObj = ClassPeriodsManager.shared.classPeriods
+                                .first(where: { $0.number == p })
+                            {
+                                return (period: periodObj, classData: raw, dayIndex: dayIndex, isForToday: isForToday)
+                            }
+                        }
+                    }
+                }
+                // No more classes today
+                return nil
+            }
+        }
+
+        // Preview/other day: show even self-study with placeholder
+        guard let raw = dataFor(periodNumber: startPeriod.number) else { return nil }
+        let isSelfStudy = raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let classData = isSelfStudy ? "You\nSelf-Study" : raw
+        return (period: startPeriod, classData: classData, dayIndex: dayIndex, isForToday: isForToday)
+    }
+
+    private func isCurrentDateWeekend() -> Bool {
+        if let override = selectedDayOverride {
+            return override < 0 || override >= 5
+        } else {
+            let calendar = Calendar.current
+            let weekday = calendar.component(.weekday, from: currentTime)
+            return weekday == 1 || weekday == 7
+        }
+    }
+
+    private func isHolidayActive() -> Bool {
+        if !isHolidayMode {
+            return false
+        }
+        if !holidayHasEndDate {
+            return true
+        }
+        let calendar = Calendar.current
+        let currentDay = calendar.startOfDay(for: currentTime)
+        let endDay = calendar.startOfDay(for: holidayEndDate)
+        return currentDay <= endDay
+    }
+
+    // Method to force refresh content without rebuilding the entire view
+    private func forceContentRefresh() {
+        // Reload data if needed
+        if AuthServiceV2.shared.isAuthenticated || sessionService.isAuthenticated {
+            classtableViewModel.fetchTimetable()
+        }
+
+        // Update current time
+        currentTime = Date()
+    }
+
+    // Safer method to detect class transitions
+    private func checkForClassTransition() -> Bool {
+        // Only check for active periods that are about to end
+        if let upcoming = upcomingClassInfo,
+           upcoming.isForToday && upcoming.period.isCurrentlyActive()
+        {
+            let secondsRemaining = upcoming.period.endTime.timeIntervalSince(Date())
+            // Only trigger refresh for the last 5 seconds of a class period
+            if secondsRemaining <= 5 && secondsRemaining > 0 {
+                return true
+            }
+
+        }
+        return false
+    }
+
+    // Add helper method to detect class period changes
+    private func shouldRefreshClassInfo() -> Bool {
+        let calendar = Calendar.current
+        let currentMinute = calendar.component(.minute, from: Date())
+        let currentSecond = calendar.component(.second, from: Date())
+
+        // Check if we're at an exact class change time (0 seconds)
+        // Add common class change minutes to this array
+        let classChangeMinutes = [0, 5, 45, 35, 15, 30, 10, 55]
+
+        // Check if we're close to the end of a period (last 10 seconds)
+        if let upcoming = upcomingClassInfo,
+           upcoming.isForToday && upcoming.period.isCurrentlyActive()
+        {
+            let secondsRemaining = upcoming.period.endTime.timeIntervalSince(Date())
+            if secondsRemaining <= 10 && secondsRemaining > 0 {
+                return true
+            }
+        }
+
+        return classChangeMinutes.contains(currentMinute) && currentSecond == 0
+    }
+
+}
