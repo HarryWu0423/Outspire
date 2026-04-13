@@ -139,8 +139,9 @@ struct UnifiedScheduleCard: View {
                 .mask(
                     VStack(spacing: 0) {
                         Rectangle()
+                            .frame(height: collapsedHeight - 40)
                         LinearGradient(
-                            colors: [.clear, .white],
+                            colors: [.white, .clear],
                             startPoint: .top,
                             endPoint: .bottom
                         )
