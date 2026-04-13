@@ -113,9 +113,9 @@ struct UnifiedScheduleCard: View {
                 }
             )
 
-            // Period rows with fade overlay when collapsed
-            if !isExpanded && scheduledPeriods.count > 3 {
-                // Collapsed: show fade hint
+            // Period rows - show all or fade based on state
+            if scheduledPeriods.count > 3 && !isExpanded {
+                // Collapsed: show 3 items with fade hint
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     VStack(spacing: 0) {
                         ForEach(displayedPeriods) { item in
@@ -163,22 +163,45 @@ struct UnifiedScheduleCard: View {
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
                 .padding(.bottom, 8)
-            } else if isExpanded && scheduledPeriods.count > 3 {
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        isExpanded.toggle()
+            } else {
+                // Expanded or <=3 items: show all
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    VStack(spacing: 0) {
+                        ForEach(scheduledPeriods) { item in
+                            let isActive = (isForToday || setAsToday)
+                                && isItemActive(item, at: context.date)
+                            let isPast = (isForToday || setAsToday)
+                                && isItemPast(item, at: context.date) && !isActive
+
+                            UnifiedScheduleRow(
+                                item: item,
+                                isActive: isActive,
+                                isPast: isPast,
+                                currentDate: context.date,
+                                accentColor: accentColor
+                            )
+                        }
                     }
-                } label: {
-                    Label("Show less", systemImage: "chevron.up")
-                        .font(.subheadline.weight(.medium))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.accentColor.opacity(0.1))
-                        .clipShape(Capsule())
+                    .padding(.vertical, 8)
                 }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity)
-                .padding(.bottom, 12)
+
+                if scheduledPeriods.count > 3 {
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            isExpanded.toggle()
+                        }
+                    } label: {
+                        Label("Show less", systemImage: "chevron.up")
+                            .font(.subheadline.weight(.medium))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.accentColor.opacity(0.1))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 12)
+                }
             }
         }
         .background(
