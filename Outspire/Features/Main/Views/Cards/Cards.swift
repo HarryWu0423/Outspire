@@ -36,24 +36,24 @@ struct NoClassCard: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            VStack(alignment: .leading, spacing: AppSpace.sm) {
+            HStack(spacing: AppSpace.md) {
                 Image(systemName: isDimmed ? "moon.stars.fill" : "checkmark.circle.fill")
-                    .font(.system(size: 40, weight: .medium))
+                    .font(.system(size: 36, weight: .medium))
                     .foregroundStyle(.white.opacity(0.9))
                     .symbolRenderingMode(.hierarchical)
                     .symbolEffect(.bounce, value: appeared)
                     .onAppear { appeared = true }
 
-                Spacer().frame(height: AppSpace.xs)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(isDimmed ? "All Done for Today" : "No Classes")
+                        .font(AppText.title)
+                        .fontDesign(.rounded)
+                        .foregroundStyle(.white)
 
-                Text(isDimmed ? "All Done for Today" : "No Classes")
-                    .font(AppText.title)
-                    .fontDesign(.rounded)
-                    .foregroundStyle(.white)
-
-                Text(isDimmed ? "Great work! Time to relax." : "Enjoy your free time!")
-                    .font(AppText.label)
-                    .foregroundStyle(.white.opacity(0.8))
+                    Text(isDimmed ? "Great work! Time to relax." : "Enjoy your free time!")
+                        .font(AppText.label)
+                        .foregroundStyle(.white.opacity(0.8))
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -64,8 +64,9 @@ struct NoClassCard: View {
                 .rotationEffect(.degrees(isDimmed ? 0 : -15))
                 .offset(x: 10, y: -6)
         }
-        .frame(height: 160)
-        .padding(AppSpace.cardPadding)
+        .frame(height: 80)
+        .padding(.horizontal, AppSpace.cardPadding)
+        .padding(.vertical, AppSpace.sm)
         .coloredRichCard(colors: gradientColors)
     }
 }
