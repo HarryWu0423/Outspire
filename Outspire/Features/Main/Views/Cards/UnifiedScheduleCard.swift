@@ -138,7 +138,7 @@ struct UnifiedScheduleCard: View {
                 .frame(maxHeight: collapsedHeight)
                 .mask(
                     VStack(spacing: 0) {
-                        Spacer()
+                        Rectangle()
                         LinearGradient(
                             colors: [.clear, .white],
                             startPoint: .top,
@@ -161,6 +161,7 @@ struct UnifiedScheduleCard: View {
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
                 .padding(.bottom, 8)
             } else if isExpanded && scheduledPeriods.count > 3 {
                 Button {
@@ -176,6 +177,7 @@ struct UnifiedScheduleCard: View {
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
                 .padding(.bottom, 12)
             }
         }
