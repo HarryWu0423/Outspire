@@ -54,7 +54,7 @@ struct UnifiedScheduleCard: View {
     }
 
     private var displayedPeriods: [SchedulePeriodItem] {
-        if isExpanded {
+        if isExpanded || scheduledPeriods.count <= 3 {
             return scheduledPeriods
         }
         return Array(scheduledPeriods.prefix(3))
