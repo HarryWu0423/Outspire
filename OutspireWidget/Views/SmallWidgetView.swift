@@ -3,6 +3,7 @@ import WidgetKit
 
 struct SmallWidgetView: View {
     let entry: ClassWidgetEntry
+    @Environment(\.widgetRenderingMode) private var renderingMode
 
     var body: some View {
         switch entry.status {
@@ -24,23 +25,19 @@ struct SmallWidgetView: View {
     }
 
     private var ongoingView: some View {
-        ZStack {
-            if let cls = entry.currentClass {
-                SubjectColors.gradient(for: cls.className)
-            } else {
-                grayGradient
-            }
-
+        widgetCard {
+            ongoingBackground
+        } content: {
             VStack(alignment: .leading, spacing: 0) {
                 Text("NOW")
                     .captionStyle()
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(secondaryForegroundStyle)
                     .textCase(.uppercase)
 
                 if let cls = entry.currentClass {
                     Text(cls.className)
                         .titleStyle(size: 20)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(primaryForegroundStyle)
                         .lineLimit(1)
                         .padding(.top, 2)
                 }
@@ -50,12 +47,12 @@ struct SmallWidgetView: View {
                 if let cls = entry.currentClass {
                     Text(timerInterval: cls.startTime ... cls.endTime, countsDown: true)
                         .numberStyle(size: 34)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(primaryForegroundStyle)
                         .tracking(-1.5)
 
-                    Text(cls.roomNumber.isEmpty ? " " : cls.roomNumber)
+                    Text(widgetSubtitle(for: cls))
                         .captionStyle()
-                        .foregroundStyle(.white.opacity(0.55))
+                        .foregroundStyle(tertiaryForegroundStyle)
                         .padding(.top, 4)
                 }
             }
@@ -65,23 +62,19 @@ struct SmallWidgetView: View {
     }
 
     private var upcomingView: some View {
-        ZStack {
-            if let cls = entry.currentClass {
-                SubjectColors.gradient(for: cls.className)
-            } else {
-                grayGradient
-            }
-
+        widgetCard {
+            ongoingBackground
+        } content: {
             VStack(alignment: .leading, spacing: 0) {
                 Text("NEXT")
                     .captionStyle()
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(secondaryForegroundStyle)
                     .textCase(.uppercase)
 
                 if let cls = entry.currentClass {
                     Text(cls.className)
                         .titleStyle(size: 20)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(primaryForegroundStyle)
                         .lineLimit(1)
                         .padding(.top, 2)
                 }
@@ -91,12 +84,12 @@ struct SmallWidgetView: View {
                 if let cls = entry.currentClass {
                     Text(timerInterval: entry.date ... cls.startTime, countsDown: true)
                         .numberStyle(size: 34)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(primaryForegroundStyle)
                         .tracking(-1.5)
 
-                    Text(cls.roomNumber.isEmpty ? " " : cls.roomNumber)
+                    Text(widgetSubtitle(for: cls))
                         .captionStyle()
-                        .foregroundStyle(.white.opacity(0.55))
+                        .foregroundStyle(tertiaryForegroundStyle)
                         .padding(.top, 4)
                 }
             }
@@ -106,26 +99,19 @@ struct SmallWidgetView: View {
     }
 
     private var breakView: some View {
-        ZStack {
-            // Use next class color for gradient, or purple for lunch
-            if let cls = entry.currentClass, cls.className.contains("Lunch") {
-                LinearGradient(colors: [Color.purple.opacity(0.6), Color.purple.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing)
-            } else if let next = entry.upcomingClasses.first {
-                SubjectColors.gradient(for: next.className)
-            } else {
-                grayGradient
-            }
-
+        widgetCard {
+            breakBackground
+        } content: {
             VStack(alignment: .leading, spacing: 0) {
                 Text(entry.currentClass?.className ?? "Break")
                     .captionStyle()
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(secondaryForegroundStyle)
                     .textCase(.uppercase)
 
                 if let next = entry.upcomingClasses.first {
                     Text(next.className)
                         .titleStyle(size: 20)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(primaryForegroundStyle)
                         .lineLimit(1)
                         .padding(.top, 2)
                 }
@@ -135,14 +121,14 @@ struct SmallWidgetView: View {
                 if let cls = entry.currentClass {
                     Text(timerInterval: entry.date ... cls.endTime, countsDown: true)
                         .numberStyle(size: 34)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(primaryForegroundStyle)
                         .tracking(-1.5)
                 }
 
                 if let next = entry.upcomingClasses.first, !next.roomNumber.isEmpty {
                     Text(next.roomNumber)
                         .captionStyle()
-                        .foregroundStyle(.white.opacity(0.55))
+                        .foregroundStyle(tertiaryForegroundStyle)
                         .padding(.top, 4)
                 }
             }
@@ -152,23 +138,58 @@ struct SmallWidgetView: View {
     }
 
     private func smallPlaceholder(label: String, message: String, gradient: LinearGradient) -> some View {
-        ZStack {
+        widgetCard {
             gradient
-
+        } content: {
             VStack(alignment: .leading, spacing: 0) {
                 Text(label)
                     .captionStyle()
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(secondaryForegroundStyle)
                     .textCase(.uppercase)
 
                 Spacer()
 
                 Text(message)
                     .titleStyle(size: 20)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(primaryForegroundStyle)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
+        }
+    }
+
+    @ViewBuilder
+    private func widgetCard<Content: View, Background: View>(
+        @ViewBuilder background: () -> Background,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
+            .containerBackground(for: .widget) {
+                if renderingMode == .fullColor {
+                    background()
+                } else {
+                    Color.clear
+                }
+            }
+    }
+
+    @ViewBuilder
+    private var ongoingBackground: some View {
+        if let cls = entry.currentClass {
+            SubjectColors.gradient(for: cls.className)
+        } else {
+            grayGradient
+        }
+    }
+
+    @ViewBuilder
+    private var breakBackground: some View {
+        if let cls = entry.currentClass, cls.className.contains("Lunch") {
+            LinearGradient(colors: [Color.purple.opacity(0.6), Color.purple.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        } else if let next = entry.upcomingClasses.first {
+            SubjectColors.gradient(for: next.className)
+        } else {
+            grayGradient
         }
     }
 
@@ -182,5 +203,24 @@ struct SmallWidgetView: View {
 
     private var purpleGradient: LinearGradient {
         LinearGradient(colors: [Color.purple.opacity(0.6), Color.purple.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
+    private func widgetSubtitle(for scheduledClass: ScheduledClass) -> String {
+        if scheduledClass.isSelfStudy {
+            return scheduledClass.roomNumber.isEmpty ? "Class-Free Period" : scheduledClass.roomNumber
+        }
+        return scheduledClass.roomNumber.isEmpty ? " " : scheduledClass.roomNumber
+    }
+
+    private var primaryForegroundStyle: AnyShapeStyle {
+        AnyShapeStyle(renderingMode == .fullColor ? Color.white : Color.primary)
+    }
+
+    private var secondaryForegroundStyle: AnyShapeStyle {
+        AnyShapeStyle(renderingMode == .fullColor ? Color.white.opacity(0.7) : Color.primary.opacity(0.75))
+    }
+
+    private var tertiaryForegroundStyle: AnyShapeStyle {
+        AnyShapeStyle(renderingMode == .fullColor ? Color.white.opacity(0.55) : Color.secondary)
     }
 }

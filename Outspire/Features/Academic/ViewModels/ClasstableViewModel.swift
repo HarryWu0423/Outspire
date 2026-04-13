@@ -560,8 +560,7 @@ class ClasstableViewModel: ObservableObject {
     /// The real weekday index (0=Mon..4=Fri, -1=weekend).
     /// Used exclusively for Live Activity lifecycle — ignores selectedDayOverride/setAsToday.
     private var realTodayDayIndex: Int {
-        let weekday = Calendar.current.component(.weekday, from: Date())
-        return (weekday == 1 || weekday == 7) ? -1 : weekday - 2
+        NormalizedScheduleBuilder.weekdayIndex(for: Date())
     }
 
     func startLiveActivityIfNeeded(timetable: [[String]]) {
@@ -572,35 +571,11 @@ class ClasstableViewModel: ObservableObject {
               todayIndex >= 0, todayIndex < 5
         else { return }
 
-        let periods = ClassPeriodsManager.shared.classPeriods
+        let schedule = NormalizedScheduleBuilder.buildDaySchedule(
+            from: timetable,
+            dayIndex: todayIndex
+        )
         let now = Date()
-        let dayColumn = todayIndex + 1
-
-        var schedule: [ScheduledClass] = []
-        for row in 1 ..< timetable.count {
-            guard dayColumn < timetable[row].count else { continue }
-            let cellData = timetable[row][dayColumn]
-            let trimmed = cellData.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { continue }
-
-            guard let period = periods.first(where: { $0.number == row }) else { continue }
-
-            let components = cellData.components(separatedBy: "\n")
-            let subject = (components.count > 1 ? components[1] : components[0])
-                .replacingOccurrences(of: "\\(\\d+\\)$", with: "", options: .regularExpression)
-            let room = components.count > 2 ? components[2] : ""
-            let teacher = components.count > 0 ? components[0] : ""
-
-            schedule.append(ScheduledClass(
-                periodNumber: row,
-                className: subject.isEmpty ? "Self-Study" : subject,
-                roomNumber: room,
-                teacherName: teacher,
-                startTime: period.startTime,
-                endTime: period.endTime,
-                isSelfStudy: false
-            ))
-        }
 
         guard schedule.contains(where: { $0.endTime > now }) else { return }
 
@@ -621,20 +596,14 @@ class ClasstableViewModel: ObservableObject {
               todayIndex >= 0, todayIndex < 5
         else { return }
 
-        let periods = ClassPeriodsManager.shared.classPeriods
-        let dayColumn = todayIndex + 1
         let now = Date()
+        let schedule = NormalizedScheduleBuilder.buildDaySchedule(
+            from: timetable,
+            dayIndex: todayIndex
+        )
 
-        // Check if any class still has time remaining
-        for row in 1 ..< timetable.count {
-            guard dayColumn < timetable[row].count else { continue }
-            let cellData = timetable[row][dayColumn]
-            guard !cellData.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
-            guard let period = periods.first(where: { $0.number == row }) else { continue }
-            if period.endTime > now { return } // Still have class
+        if !schedule.contains(where: { $0.endTime > now }) {
+            ClassActivityManager.shared.endActivity()
         }
-
-        // All classes done
-        ClassActivityManager.shared.endActivity()
     }
 }

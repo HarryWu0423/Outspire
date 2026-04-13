@@ -22,7 +22,7 @@ struct ExtraView: View {
                     settingsRow("Dining Menus", icon: "fork.knife", color: .orange)
                 }
                 NavigationLink(destination: ClubInfoView()) {
-                    settingsRow("Hall of Clubs", icon: "person.2", color: .purple)
+                    settingsRow("Hall of Clubs", icon: "person.2.fill", color: .purple)
                 }
                 NavigationLink(destination: ReflectionsView()) {
                     settingsRow("Reflections", icon: "square.and.pencil", color: .pink)

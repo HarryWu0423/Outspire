@@ -3,16 +3,23 @@ import Foundation
 
 struct ClassActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable {
-        /// All classes for the day, sorted by start time ascending.
-        /// The LA UI derives current state from this array + current time.
-        var classes: [ClassInfo]
-
-        struct ClassInfo: Codable, Hashable {
-            var name: String
-            var room: String
-            var start: Date
-            var end: Date
+        enum Phase: String, Codable, Hashable {
+            case upcoming
+            case ongoing
+            case ending
+            case breakTime = "break"
+            case event
+            case done
         }
+
+        var dayKey: String
+        var phase: Phase
+        var title: String
+        var subtitle: String
+        var rangeStart: Date
+        var rangeEnd: Date
+        var nextTitle: String?
+        var sequence: Int
     }
 
     var startDate: Date

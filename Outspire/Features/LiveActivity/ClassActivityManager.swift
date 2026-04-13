@@ -2,26 +2,111 @@ import ActivityKit
 import Foundation
 import OSLog
 
+private enum LiveActivityOwner: String {
+    case app
+    case worker
+}
+
+private enum LiveActivityStateBuilder {
+    static func state(
+        for schedule: [ScheduledClass],
+        at now: Date
+    ) -> ClassActivityAttributes.ContentState? {
+        let sorted = schedule.sorted { $0.startTime < $1.startTime }
+        guard let first = sorted.first, let last = sorted.last else { return nil }
+
+        let dayKey = NormalizedScheduleBuilder.dayKey(for: now)
+
+        if now < first.startTime {
+            let countdownStart = max(now, first.startTime.addingTimeInterval(-1800))
+            return ClassActivityAttributes.ContentState(
+                dayKey: dayKey,
+                phase: .upcoming,
+                title: first.className,
+                subtitle: subtitle(for: first),
+                rangeStart: countdownStart,
+                rangeEnd: first.startTime,
+                nextTitle: sorted.dropFirst().first?.className,
+                sequence: 0
+            )
+        }
+
+        for (index, current) in sorted.enumerated() {
+            if current.startTime <= now, current.endTime > now {
+                let remaining = current.endTime.timeIntervalSince(now)
+                return ClassActivityAttributes.ContentState(
+                    dayKey: dayKey,
+                    phase: remaining <= 300 ? .ending : .ongoing,
+                    title: current.className,
+                    subtitle: subtitle(for: current),
+                    rangeStart: current.startTime,
+                    rangeEnd: current.endTime,
+                    nextTitle: sorted.dropFirst(index + 1).first?.className,
+                    sequence: index * 3 + (remaining <= 300 ? 2 : 1)
+                )
+            }
+
+            if current.endTime <= now, let next = sorted.dropFirst(index + 1).first, next.startTime > now {
+                let breakKind = NormalizedScheduleBuilder.breakKind(between: current, and: next)
+                return ClassActivityAttributes.ContentState(
+                    dayKey: dayKey,
+                    phase: .breakTime,
+                    title: breakKind == .lunch ? "Lunch Break" : "Break",
+                    subtitle: "Next: \(next.className)",
+                    rangeStart: current.endTime,
+                    rangeEnd: next.startTime,
+                    nextTitle: next.className,
+                    sequence: index * 3 + 3
+                )
+            }
+        }
+
+        return ClassActivityAttributes.ContentState(
+            dayKey: dayKey,
+            phase: .done,
+            title: "Schedule Complete",
+            subtitle: "",
+            rangeStart: last.endTime,
+            rangeEnd: last.endTime.addingTimeInterval(900),
+            nextTitle: nil,
+            sequence: sorted.count * 3 + 1
+        )
+    }
+
+    static func staleDate(for schedule: [ScheduledClass]) -> Date? {
+        schedule.map(\.endTime).max()?.addingTimeInterval(900)
+    }
+
+    private static func subtitle(for scheduledClass: ScheduledClass) -> String {
+        if scheduledClass.isSelfStudy {
+            return scheduledClass.roomNumber.isEmpty ? "Class-Free Period" : scheduledClass.roomNumber
+        }
+        return scheduledClass.roomNumber
+    }
+}
+
 @MainActor
 final class ClassActivityManager: ObservableObject {
     static let shared = ClassActivityManager()
 
     @Published private(set) var isActivityRunning = false
+
     private var currentActivity: Activity<ClassActivityAttributes>?
-    private var lastPushStartToken: String?
-
-    /// The full timetable grid, kept so we can register with the Worker.
+    private var currentSchedule: [ScheduledClass] = []
     private var currentTimetable: [[String]] = []
+    private var holidayActive = false
+    private var lastPushStartToken: String?
+    private var lastUploadedUpdateTokenByActivity: [String: String] = [:]
+    private var tokenObservationTasks: [String: Task<Void, Never>] = [:]
+    private var currentOwner: LiveActivityOwner = .worker
 
-    /// Whether we already sent a register request for the current token.
     private var hasRegistered = false
-
-    /// Guard against overlapping register requests.
     private var registerGeneration = 0
+    private var retryCount = 0
+    private var isRegistering = false
+    private static let maxRetries = 2
 
     private init() {
-        // Observe pushToStartToken once — lives for the entire app lifetime.
-        // This is the only token needed for the self-driven LA architecture.
         if #available(iOS 17.2, *) {
             Task { @MainActor in
                 for await token in Activity<ClassActivityAttributes>.pushToStartTokenUpdates {
@@ -36,12 +121,10 @@ final class ClassActivityManager: ObservableObject {
             }
         }
 
-        // Restore any existing activity from a previous app session
-        restoreExistingActivity()
+        reconcileExistingActivities()
     }
 
     var isEnabled: Bool {
-        // Default to true for existing users who never saw the onboarding LA toggle
         UserDefaults.standard.object(forKey: "liveActivityEnabled") as? Bool ?? true
     }
 
@@ -49,147 +132,292 @@ final class ClassActivityManager: ObservableObject {
         ActivityAuthorizationInfo().areActivitiesEnabled
     }
 
-    // MARK: - Restore
+    func reconcileExistingActivities() {
+        let activities = Activity<ClassActivityAttributes>.activities.sorted {
+            $0.attributes.startDate > $1.attributes.startDate
+        }
 
-    /// Reattach to an activity that survived an app kill/relaunch.
-    /// Ends any activities with incompatible content-state (from pre-upgrade).
-    private func restoreExistingActivity() {
-        let activities = Activity<ClassActivityAttributes>.activities
-        guard !activities.isEmpty else { return }
+        guard !activities.isEmpty else {
+            currentActivity = nil
+            isActivityRunning = false
+            return
+        }
 
+        let existingCurrentID = currentActivity?.id
+        currentActivity = nil
+        isActivityRunning = false
+
+        var adoptedActivityID: String?
         for activity in activities {
-            // Verify the content-state has the new classes array format
-            if activity.content.state.classes.isEmpty {
-                // Old-schema or empty activity — end it
-                Task {
-                    await activity.end(nil, dismissalPolicy: .immediate)
-                    Log.app.info("Ended incompatible Live Activity from previous version")
-                }
+            let state = activity.content.state
+            guard !state.dayKey.isEmpty, !state.title.isEmpty else {
+                Task { await activity.end(nil, dismissalPolicy: .immediate) }
                 continue
             }
 
-            // Adopt the first valid activity
-            if currentActivity == nil {
-                currentActivity = activity
-                isActivityRunning = true
-                Log.app.info("Restored existing Live Activity from previous session")
+            if adoptedActivityID == nil {
+                let owner: LiveActivityOwner = activity.id == existingCurrentID ? currentOwner : .worker
+                adopt(activity, owner: owner)
+                adoptedActivityID = activity.id
             } else {
-                // Extra activity — end it
                 Task { await activity.end(nil, dismissalPolicy: .immediate) }
             }
         }
     }
 
-    // MARK: - Start
+    func startActivity(
+        schedule: [ScheduledClass],
+        timetable: [[String]] = [],
+        skipEnabledCheck: Bool = false
+    ) {
+        guard skipEnabledCheck || isEnabled, isSupported else { return }
 
-    func startActivity(schedule: [ScheduledClass], timetable: [[String]] = [], skipEnabledCheck: Bool = false) {
-        guard skipEnabledCheck || isEnabled, isSupported, !schedule.isEmpty else { return }
+        let normalizedSchedule = schedule.sorted { $0.startTime < $1.startTime }
+        guard !normalizedSchedule.isEmpty else { return }
 
-        // Store timetable for Worker registration
         if !timetable.isEmpty {
             currentTimetable = timetable
         }
+        currentSchedule = normalizedSchedule
 
-        guard currentActivity == nil else {
-            Log.app.debug("Live Activity already running")
+        reconcileExistingActivities()
+        if currentActivity != nil {
+            refreshActivityStateIfNeeded(schedule: normalizedSchedule)
             return
         }
 
         let now = Date()
-        guard schedule.contains(where: { $0.endTime > now }) else { return }
+        guard let initialState = LiveActivityStateBuilder.state(for: normalizedSchedule, at: now),
+              initialState.phase != .done
+        else { return }
 
-        // Build the full-day content state with all classes
-        let classInfos = schedule.map { sc in
-            ClassActivityAttributes.ContentState.ClassInfo(
-                name: sc.className,
-                room: sc.roomNumber,
-                start: sc.startTime,
-                end: sc.endTime
-            )
-        }
-
-        let initialState = ClassActivityAttributes.ContentState(classes: classInfos)
         let attributes = ClassActivityAttributes(startDate: now)
-
-        // Set staleDate to 15 min after last class
-        let lastEnd = schedule.map(\.endTime).max() ?? now
-        let staleDate = lastEnd.addingTimeInterval(900)
-        let content = ActivityContent(state: initialState, staleDate: staleDate)
+        let content = ActivityContent(
+            state: initialState,
+            staleDate: LiveActivityStateBuilder.staleDate(for: normalizedSchedule)
+        )
 
         do {
-            currentActivity = try Activity.request(
+            let activity = try Activity.request(
                 attributes: attributes,
                 content: content,
                 pushType: .token
             )
-            isActivityRunning = true
-            Log.app.info("Live Activity started with \(classInfos.count) classes")
+            currentOwner = .app
+            adopt(activity, owner: .app)
+            refreshActivityStateIfNeeded(schedule: normalizedSchedule)
+            Log.app.info("Live Activity started with sequence \(initialState.sequence)")
         } catch {
             Log.app.error("Failed to start Live Activity: \(error.localizedDescription)")
         }
     }
 
-    // MARK: - End
+    func refreshActivityStateIfNeeded(schedule: [ScheduledClass]? = nil) {
+        if let schedule {
+            currentSchedule = schedule.sorted { $0.startTime < $1.startTime }
+        }
 
-    /// End the current activity. Called when app is foregrounded and all classes are done.
+        guard let activity = currentActivity, !currentSchedule.isEmpty else { return }
+        guard let desiredState = LiveActivityStateBuilder.state(for: currentSchedule, at: Date()) else { return }
+
+        if desiredState.phase == .done {
+            endActivity()
+            return
+        }
+
+        guard activity.content.state.sequence != desiredState.sequence else { return }
+
+        let staleDate = LiveActivityStateBuilder.staleDate(for: currentSchedule)
+        Task {
+            await activity.update(ActivityContent(state: desiredState, staleDate: staleDate))
+            Log.app.debug("Live Activity updated to sequence \(desiredState.sequence)")
+        }
+    }
+
     func endActivity() {
         guard let activity = currentActivity else { return }
+        let dayKey = activity.content.state.dayKey
 
         Task {
-            await activity.end(nil, dismissalPolicy: .after(Date().addingTimeInterval(900)))
+            let finalState = LiveActivityStateBuilder.state(for: currentSchedule, at: Date())
+            let finalContent = finalState.map {
+                ActivityContent(
+                    state: $0,
+                    staleDate: LiveActivityStateBuilder.staleDate(for: currentSchedule)
+                )
+            }
+            await activity.end(
+                finalContent,
+                dismissalPolicy: .after(Date().addingTimeInterval(900))
+            )
             Log.app.info("Live Activity ended")
         }
 
-        currentActivity = nil
-        isActivityRunning = false
+        PushRegistrationService.notifyActivityEnded(
+            activityId: activity.id,
+            dayKey: dayKey
+        )
+
+        clearCurrentActivity(activityID: activity.id)
     }
 
-    /// End all activities (cleanup on logout).
     func endAllActivities() {
         Task {
             for activity in Activity<ClassActivityAttributes>.activities {
+                PushRegistrationService.notifyActivityEnded(
+                    activityId: activity.id,
+                    dayKey: activity.content.state.dayKey
+                )
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
         }
+
+        for (_, task) in tokenObservationTasks {
+            task.cancel()
+        }
+        tokenObservationTasks.removeAll()
+        lastUploadedUpdateTokenByActivity.removeAll()
         currentActivity = nil
         isActivityRunning = false
+        currentSchedule = []
         currentTimetable = []
         hasRegistered = false
     }
 
-    // MARK: - Check if classes are done (for foreground end)
-
     func endActivityIfClassesDone(schedule: [ScheduledClass]) {
-        guard currentActivity != nil else { return }
-        let now = Date()
-        if !schedule.contains(where: { $0.endTime > now }) {
+        currentSchedule = schedule.sorted { $0.startTime < $1.startTime }
+        if !currentSchedule.contains(where: { $0.endTime > Date() }) {
             endActivity()
         }
     }
 
-    // MARK: - Worker Registration
-
-    /// Called on scenePhase .active to re-attempt registration.
     func retryRegistrationIfNeeded() {
+        reconcileExistingActivities()
+        if let schedule = buildTodayScheduleFromTimetable() {
+            currentSchedule = schedule
+            refreshActivityStateIfNeeded(schedule: schedule)
+            if !holidayActive, currentActivity == nil, shouldStartActivity(for: schedule, at: Date()) {
+                startActivity(schedule: schedule, timetable: currentTimetable)
+            }
+        }
+
         guard !hasRegistered else { return }
         retryCount = 0
         registerIfReady()
     }
 
-    /// Called externally when the timetable data becomes available.
     func setTimetable(_ timetable: [[String]]) {
         guard !timetable.isEmpty else { return }
         currentTimetable = timetable
+        if let schedule = buildTodayScheduleFromTimetable() {
+            currentSchedule = schedule
+            refreshActivityStateIfNeeded(schedule: schedule)
+            if !holidayActive, currentActivity == nil, shouldStartActivity(for: schedule, at: Date()) {
+                startActivity(schedule: schedule, timetable: timetable)
+            }
+        }
         hasRegistered = false
         registerIfReady()
     }
 
-    private var retryCount = 0
-    private var isRegistering = false
-    private static let maxRetries = 2
+    func setHolidayActive(_ active: Bool) {
+        holidayActive = active
+        if active, currentActivity != nil {
+            endActivity()
+        }
+    }
+
+    private func adopt(
+        _ activity: Activity<ClassActivityAttributes>,
+        owner: LiveActivityOwner
+    ) {
+        currentActivity = activity
+        currentOwner = owner
+        isActivityRunning = true
+        observePushTokenUpdates(for: activity, owner: owner)
+        if let token = activity.pushToken {
+            handlePushUpdateToken(
+                token.map { String(format: "%02x", $0) }.joined(),
+                for: activity,
+                owner: owner
+            )
+        }
+        Log.app.info("Adopted Live Activity \(activity.id, privacy: .public)")
+    }
+
+    private func observePushTokenUpdates(
+        for activity: Activity<ClassActivityAttributes>,
+        owner: LiveActivityOwner
+    ) {
+        guard tokenObservationTasks[activity.id] == nil else { return }
+
+        tokenObservationTasks[activity.id] = Task { [weak self] in
+            for await token in activity.pushTokenUpdates {
+                let tokenString = token.map { String(format: "%02x", $0) }.joined()
+                await MainActor.run {
+                    self?.handlePushUpdateToken(tokenString, for: activity, owner: owner)
+                }
+            }
+        }
+    }
+
+    private func handlePushUpdateToken(
+        _ token: String,
+        for activity: Activity<ClassActivityAttributes>,
+        owner: LiveActivityOwner
+    ) {
+        guard !token.isEmpty else { return }
+        if lastUploadedUpdateTokenByActivity[activity.id] == token { return }
+
+        lastUploadedUpdateTokenByActivity[activity.id] = token
+        PushRegistrationService.updateActivityToken(
+            activityId: activity.id,
+            dayKey: activity.content.state.dayKey,
+            pushUpdateToken: token,
+            owner: owner.rawValue
+        ) { success in
+            if success {
+                Log.app.info("Uploaded LA update token for activity \(activity.id, privacy: .public)")
+            } else {
+                Log.app.error("Failed to upload LA update token for activity \(activity.id, privacy: .public)")
+            }
+        }
+    }
+
+    private func clearCurrentActivity(activityID: String) {
+        tokenObservationTasks[activityID]?.cancel()
+        tokenObservationTasks.removeValue(forKey: activityID)
+        lastUploadedUpdateTokenByActivity.removeValue(forKey: activityID)
+        currentActivity = nil
+        isActivityRunning = false
+        currentOwner = .worker
+    }
+
+    private func buildTodayScheduleFromTimetable() -> [ScheduledClass]? {
+        guard !currentTimetable.isEmpty else { return nil }
+
+        let dayIndex = NormalizedScheduleBuilder.weekdayIndex(for: Date())
+        guard dayIndex >= 0, dayIndex < 5 else { return nil }
+
+        let schedule = NormalizedScheduleBuilder.buildDaySchedule(
+            from: currentTimetable,
+            dayIndex: dayIndex
+        )
+        return schedule.isEmpty ? nil : schedule
+    }
+
+    private func shouldStartActivity(for schedule: [ScheduledClass], at now: Date) -> Bool {
+        guard !schedule.isEmpty else { return false }
+        guard schedule.contains(where: { $0.endTime > now }) else { return false }
+
+        if let firstStart = schedule.map(\.startTime).min() {
+            return now >= firstStart.addingTimeInterval(-1800)
+        }
+
+        return false
+    }
 
     private func registerIfReady() {
-        // Only need pushStartToken — no pushUpdateToken required
         guard !hasRegistered, !isRegistering,
               let startToken = lastPushStartToken,
               !currentTimetable.isEmpty,

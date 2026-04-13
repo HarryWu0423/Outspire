@@ -86,13 +86,14 @@ struct ClassWidgetProvider: TimelineProvider {
             ))
 
             if let next = upcoming.first {
-                // Detect lunch break (gap > 30 min) vs regular break
-                let gap = next.startTime.timeIntervalSince(cls.endTime)
-                let isLunchBreak = gap > 1800
+                let breakKind = NormalizedScheduleBuilder.breakKind(
+                    between: cls,
+                    and: next
+                )
 
                 let breakClass = ScheduledClass(
                     periodNumber: 0,
-                    className: isLunchBreak ? "Lunch Break" : "Break",
+                    className: breakKind == .lunch ? "Lunch Break" : "Break",
                     roomNumber: "",
                     teacherName: "",
                     startTime: cls.endTime,
@@ -121,10 +122,10 @@ struct ClassWidgetProvider: TimelineProvider {
         }
 
         let now = Date()
-        var filtered = entries.filter { $0.date >= now }
-        if filtered.isEmpty, let last = entries.last {
-            filtered = [last]
-        }
+        let sortedEntries = entries.sorted { $0.date < $1.date }
+        let currentEntry = sortedEntries.last { $0.date <= now }
+        let futureEntries = sortedEntries.filter { $0.date > now }
+        let filtered = (currentEntry.map { [$0] } ?? []) + futureEntries
 
         // Use .atEnd for active schedule (entries have exact transition times),
         // .after(nextMorning) for completed state so widget refreshes next day
@@ -143,42 +144,13 @@ struct ClassWidgetProvider: TimelineProvider {
     private func buildTodaySchedule(from timetable: [[String]]) -> [ScheduledClass] {
         guard !timetable.isEmpty else { return [] }
 
-        let calendar = Calendar.current
-        let weekday = calendar.component(.weekday, from: Date())
-        let dayColumn = weekday - 1
-        guard dayColumn >= 1, dayColumn <= 5 else { return [] }
+        let dayIndex = NormalizedScheduleBuilder.weekdayIndex(for: Date())
+        guard dayIndex >= 0, dayIndex < 5 else { return [] }
 
-        let periods = WidgetClassPeriods.today
-
-        var result: [ScheduledClass] = []
-        for row in 1 ..< timetable.count {
-            guard dayColumn < timetable[row].count else { continue }
-            let cellData = timetable[row][dayColumn]
-            let trimmed = cellData.trimmingCharacters(in: .whitespacesAndNewlines)
-
-            guard let period = periods.first(where: { $0.number == row }) else { continue }
-
-            let components = cellData.components(separatedBy: "\n")
-            let teacher = components.count > 0 ? components[0] : ""
-            let rawSubject = components.count > 1 ? components[1] : ""
-            let room = components.count > 2 ? components[2] : ""
-
-            // Strip trailing class number like "(8)" from "Mathematics(8)"
-            let subject = rawSubject.replacingOccurrences(
-                of: "\\(\\d+\\)$", with: "", options: .regularExpression
-            )
-
-            result.append(ScheduledClass(
-                periodNumber: row,
-                className: subject.isEmpty ? "Self-Study" : subject,
-                roomNumber: room,
-                teacherName: teacher,
-                startTime: period.startTime,
-                endTime: period.endTime,
-                isSelfStudy: trimmed.isEmpty
-            ))
-        }
-
-        return result.filter { !$0.isSelfStudy }
+        return NormalizedScheduleBuilder.buildDaySchedule(
+            from: timetable,
+            dayIndex: dayIndex,
+            periods: WidgetClassPeriods.today
+        )
     }
 }

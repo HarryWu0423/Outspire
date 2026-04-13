@@ -91,6 +91,7 @@ struct TodayView: View {
         }
         .onChange(of: classtableViewModel.timetable) { _, timetable in
             classtableViewModel.startLiveActivityIfNeeded(timetable: timetable)
+            ClassActivityManager.shared.setHolidayActive(classtableViewModel.isHolidayActive())
             // Keep the activity manager's timetable in sync for Worker registration
             ClassActivityManager.shared.setTimetable(timetable)
         }
@@ -107,13 +108,16 @@ struct TodayView: View {
         }
         .onChange(of: classtableViewModel.isHolidayMode) { _, newValue in
             Configuration.isHolidayMode = newValue
+            ClassActivityManager.shared.setHolidayActive(classtableViewModel.isHolidayActive())
             updateGradientColors()
         }
         .onChange(of: classtableViewModel.holidayHasEndDate) { _, newValue in
             Configuration.holidayHasEndDate = newValue
+            ClassActivityManager.shared.setHolidayActive(classtableViewModel.isHolidayActive())
         }
         .onChange(of: classtableViewModel.holidayEndDate) { _, newValue in
             Configuration.holidayEndDate = newValue
+            ClassActivityManager.shared.setHolidayActive(classtableViewModel.isHolidayActive())
         }
         .onChange(of: colorScheme) { _, _ in
             updateGradientColors()
@@ -337,6 +341,7 @@ struct TodayView: View {
             // If timetable is already loaded from cache (no onChange will fire),
             // explicitly trigger Live Activity + Worker registration.
             if !classtableViewModel.timetable.isEmpty {
+                ClassActivityManager.shared.setHolidayActive(classtableViewModel.isHolidayActive())
                 classtableViewModel.startLiveActivityIfNeeded(timetable: classtableViewModel.timetable)
                 ClassActivityManager.shared.setTimetable(classtableViewModel.timetable)
             }
