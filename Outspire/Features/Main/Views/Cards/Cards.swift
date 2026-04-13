@@ -54,10 +54,11 @@ struct NoClassCard: View {
                         .font(AppText.label)
                         .foregroundStyle(.white.opacity(0.8))
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(minHeight: 80)
-            .clipped()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, AppSpace.cardPadding)
+            .padding(.vertical, AppSpace.md)
 
             // Decorative background icon
             Image(systemName: isDimmed ? "sparkles" : "leaf.fill")
@@ -66,9 +67,7 @@ struct NoClassCard: View {
                 .rotationEffect(.degrees(isDimmed ? 0 : -15))
                 .offset(x: 10, y: -6)
         }
-        .frame(height: 80)
-        .padding(.horizontal, AppSpace.cardPadding)
-        .padding(.vertical, AppSpace.sm)
+        .frame(height: 60)
         .coloredRichCard(colors: gradientColors)
     }
 }
