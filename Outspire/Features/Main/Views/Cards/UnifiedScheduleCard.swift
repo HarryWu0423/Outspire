@@ -8,6 +8,7 @@ struct UnifiedScheduleCard: View {
     let effectiveDate: Date?
 
     @Environment(\.colorScheme) private var colorScheme
+    @State private var isExpanded = false
 
     private var dayWeekday: Int { dayIndex + 2 }
 
@@ -52,6 +53,17 @@ struct UnifiedScheduleCard: View {
         return .blue
     }
 
+    private var displayedPeriods: [SchedulePeriodItem] {
+        if isExpanded {
+            return scheduledPeriods
+        }
+        return Array(scheduledPeriods.prefix(3))
+    }
+
+    private var collapsedHeight: CGFloat {
+        CGFloat(3 * 56)
+    }
+
     var body: some View {
         if scheduledPeriods.isEmpty {
             NoClassCard()
@@ -75,9 +87,18 @@ struct UnifiedScheduleCard: View {
                         .foregroundStyle(.white.opacity(0.75))
                 }
                 Spacer()
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isExpanded.toggle()
+                    }
+                } label: {
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                }
             }
             .padding(.horizontal, 22)
-            .padding(.vertical, 20)
+            .padding(.vertical, 16)
             .overlay(alignment: .trailing) {
                 Text("\(scheduledPeriods.count)")
                     .font(.system(size: 120, weight: .black, design: .rounded))
@@ -104,7 +125,7 @@ struct UnifiedScheduleCard: View {
             // Period rows on subtly tinted surface
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 VStack(spacing: 0) {
-                    ForEach(scheduledPeriods) { item in
+                    ForEach(displayedPeriods) { item in
                         let isActive = (isForToday || setAsToday)
                             && isItemActive(item, at: context.date)
                         let isPast = (isForToday || setAsToday)
@@ -121,6 +142,8 @@ struct UnifiedScheduleCard: View {
                 }
                 .padding(.vertical, 8)
             }
+            .frame(maxHeight: isExpanded ? .none : collapsedHeight)
+            .clipped()
         }
         .background(
             shape.fill(colorScheme == .dark ? AppColor.richDarkCard : .white)
