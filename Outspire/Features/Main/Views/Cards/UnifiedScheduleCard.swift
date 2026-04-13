@@ -140,25 +140,25 @@ struct UnifiedScheduleCard: View {
             if !isExpanded && scheduledPeriods.count > 3 {
                 VStack(spacing: 8) {
                     LinearGradient(
-                        colors: [.clear, .black.opacity(0.3)],
+                        colors: [.clear, .black.opacity(0.15)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
-                    .frame(height: 30)
+                    .frame(height: 24)
 
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             isExpanded.toggle()
                         }
                     } label: {
-                        HStack(spacing: 4) {
-                            Text("Show more")
-                                .font(.subheadline.weight(.medium))
-                            Image(systemName: "chevron.down")
-                                .font(.caption)
-                        }
-                        .foregroundStyle(.secondary)
+                        Label("Show more", systemImage: "chevron.down")
+                            .font(.subheadline.weight(.medium))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.accentColor.opacity(0.1))
+                            .clipShape(Capsule())
                     }
+                    .buttonStyle(.plain)
                     .padding(.bottom, 8)
                 }
             } else if isExpanded && scheduledPeriods.count > 3 {
@@ -167,14 +167,14 @@ struct UnifiedScheduleCard: View {
                         isExpanded.toggle()
                     }
                 } label: {
-                    HStack(spacing: 4) {
-                        Text("Show less")
-                            .font(.subheadline.weight(.medium))
-                        Image(systemName: "chevron.up")
-                            .font(.caption)
-                    }
-                    .foregroundStyle(.secondary)
+                    Label("Show less", systemImage: "chevron.up")
+                        .font(.subheadline.weight(.medium))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.accentColor.opacity(0.1))
+                        .clipShape(Capsule())
                 }
+                .buttonStyle(.plain)
                 .padding(.bottom, 12)
             }
         }
