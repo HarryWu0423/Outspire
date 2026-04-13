@@ -20,3 +20,7 @@
 2. 配置 DeepSeek API: 创建 Configurations.local.swift，添加 apiKey 和 baseURL，将模型改为 deepseek/deepseek-chat
 3. 修改 Today 页面未登录时按钮行为：从跳转到 SettingsView 改为直接跳转到 AccountV2View（登录页面）
 4. 从 Today 进入登录页面时，登录成功后自动返回 Today（通过 autoDismissOnLogin 参数控制）
+5. Today 页面 Schedule 卡片添加折叠功能：默认显示 3 行，有展开/折叠按钮
+6. All Done 卡片高度改为 160（原来的一半），不可展开；Schedule 卡片展开按钮移到底部，添加渐隐效果暗示可展开
+7. 优化 All Done 卡片：高度改为 85，左右左对齐，上下居中
+8. 修改默认主题色为 #E38D3D（橙色）
