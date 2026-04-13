@@ -55,7 +55,9 @@ struct NoClassCard: View {
                         .foregroundStyle(.white.opacity(0.8))
                 }
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minHeight: 80)
+            .clipped()
 
             // Decorative background icon
             Image(systemName: isDimmed ? "sparkles" : "leaf.fill")
