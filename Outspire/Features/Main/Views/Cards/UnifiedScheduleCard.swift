@@ -54,14 +54,14 @@ struct UnifiedScheduleCard: View {
     }
 
     private var displayedPeriods: [SchedulePeriodItem] {
-        if isExpanded || scheduledPeriods.count <= 3 {
+        if isExpanded || scheduledPeriods.count <= 4 {
             return scheduledPeriods
         }
-        return Array(scheduledPeriods.prefix(3))
+        return Array(scheduledPeriods.prefix(4))
     }
 
     private var collapsedHeight: CGFloat {
-        CGFloat(3 * 56)
+        CGFloat(4 * 56)
     }
 
     var body: some View {
@@ -114,7 +114,7 @@ struct UnifiedScheduleCard: View {
             )
 
             // Period rows - show all or fade based on state
-            if scheduledPeriods.count > 3 && !isExpanded {
+            if scheduledPeriods.count > 4 && !isExpanded {
                 // Collapsed: show 3 items with fade hint
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     VStack(spacing: 0) {
@@ -186,7 +186,7 @@ struct UnifiedScheduleCard: View {
                     .padding(.vertical, 8)
                 }
 
-                if scheduledPeriods.count > 3 {
+                if scheduledPeriods.count > 4 {
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             isExpanded.toggle()
