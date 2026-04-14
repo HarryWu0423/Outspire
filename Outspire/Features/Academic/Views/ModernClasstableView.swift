@@ -61,8 +61,9 @@ struct ModernClasstableView: View {
                             }
 
                             if period.number == 4 {
-                                Divider()
-                                    .background(Color.gray.opacity(0.3))
+                                Rectangle()
+                                    .fill(Color.accentColor.opacity(0.15))
+                                    .frame(height: 2)
                                     .padding(.top, 4)
                             }
                         }
