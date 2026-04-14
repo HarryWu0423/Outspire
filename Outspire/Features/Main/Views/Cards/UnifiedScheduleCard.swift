@@ -141,10 +141,10 @@ struct UnifiedScheduleCard: View {
                             )
 
                             if isLunchDivider(after: item.periodNumber) {
-                                Rectangle()
+                                Capsule()
                                     .fill(Color.accentColor.opacity(0.15))
                                     .frame(height: 2)
-                                    .padding(.leading, 26)
+                                    .padding(.horizontal, 16)
                             }
                         }
                     }
@@ -198,10 +198,10 @@ struct UnifiedScheduleCard: View {
                             )
 
                             if isLunchDivider(after: item.periodNumber) {
-                                Rectangle()
+                                Capsule()
                                     .fill(Color.accentColor.opacity(0.15))
                                     .frame(height: 2)
-                                    .padding(.leading, 26)
+                                    .padding(.horizontal, 16)
                             }
                         }
                     }
