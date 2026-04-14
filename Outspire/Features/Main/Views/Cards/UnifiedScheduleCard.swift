@@ -336,12 +336,10 @@ private struct UnifiedScheduleRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            // Colored dot indicator (only show for non-self-study)
-            if !item.info.isSelfStudy {
-                Circle()
-                    .fill(subjectColor)
-                    .frame(width: 6, height: 6)
-            }
+            // Invisible placeholder for alignment (6pt dot + 10pt spacing = 16pt)
+            Circle()
+                .opacity(0)
+                .frame(width: 6, height: 6)
 
             VStack(alignment: .leading, spacing: isActive ? 6 : 3) {
                 // Subject name
