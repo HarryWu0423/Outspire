@@ -53,6 +53,14 @@ struct UnifiedScheduleCard: View {
         return .blue
     }
 
+    private var hasLunchDivider: Bool {
+        scheduledPeriods.contains { $0.periodNumber == 4 } && scheduledPeriods.contains { $0.periodNumber == 5 }
+    }
+
+    private func isLunchDivider(after periodNumber: Int) -> Bool {
+        periodNumber == 4 && hasLunchDivider
+    }
+
     private var displayedPeriods: [SchedulePeriodItem] {
         if isExpanded || scheduledPeriods.count <= 5 {
             return scheduledPeriods
@@ -131,6 +139,12 @@ struct UnifiedScheduleCard: View {
                                 currentDate: context.date,
                                 accentColor: accentColor
                             )
+
+                            if isLunchDivider(after: item.periodNumber) {
+                                Divider()
+                                    .background(Color.gray.opacity(0.3))
+                                    .padding(.leading, 26)
+                            }
                         }
                     }
                     .padding(.vertical, 8)
@@ -167,7 +181,7 @@ struct UnifiedScheduleCard: View {
             } else {
                 // Expanded or <=3 items: show all
                 TimelineView(.periodic(from: .now, by: 1)) { context in
-                    VStack(spacing: 0) {
+                   VStack(spacing: 0) {
                         ForEach(scheduledPeriods) { item in
                             let isActive = (isForToday || setAsToday)
                                 && isItemActive(item, at: context.date)
@@ -181,6 +195,12 @@ struct UnifiedScheduleCard: View {
                                 currentDate: context.date,
                                 accentColor: accentColor
                             )
+
+                            if isLunchDivider(after: item.periodNumber) {
+                                Divider()
+                                    .background(Color.gray.opacity(0.3))
+                                    .padding(.leading, 26)
+                            }
                         }
                     }
                     .padding(.vertical, 8)
