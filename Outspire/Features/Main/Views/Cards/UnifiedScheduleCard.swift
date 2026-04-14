@@ -144,7 +144,7 @@ struct UnifiedScheduleCard: View {
                                 Capsule()
                                     .fill(Color.accentColor.opacity(0.15))
                                     .frame(height: 2)
-                                    .padding(.horizontal, 16)
+                                    .padding(.horizontal, 8)
                             }
                         }
                     }
@@ -201,7 +201,7 @@ struct UnifiedScheduleCard: View {
                                 Capsule()
                                     .fill(Color.accentColor.opacity(0.15))
                                     .frame(height: 2)
-                                    .padding(.horizontal, 16)
+                                    .padding(.horizontal, 8)
                             }
                         }
                     }
