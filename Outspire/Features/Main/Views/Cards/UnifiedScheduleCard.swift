@@ -336,9 +336,9 @@ private struct UnifiedScheduleRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            // Invisible placeholder for alignment (6pt dot + 10pt spacing = 16pt)
+            // Dot: show for non-self-study, invisible placeholder for self-study
             Circle()
-                .opacity(0)
+                .fill(item.info.isSelfStudy ? Color.clear : subjectColor)
                 .frame(width: 6, height: 6)
 
             VStack(alignment: .leading, spacing: isActive ? 6 : 3) {
