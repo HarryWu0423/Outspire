@@ -18,6 +18,7 @@ interface RegisterBody {
   sandbox?: boolean;
   track: "ibdp" | "alevel";
   entryYear: string;
+  studentCode?: string;
   schedule: Record<string, ClassPeriod[]>;
 }
 
@@ -246,6 +247,22 @@ function decodeBool(value: number | string | null | undefined): boolean {
   return Number(value ?? 0) === 1;
 }
 
+function normalizeEntryYear(raw: string): string {
+  const trimmed = raw.trim();
+  const withoutPrefix = trimmed.replace(/^[sS]+/, "");
+  const digits = withoutPrefix.replace(/\D/g, "");
+  return digits.length >= 4 ? digits.slice(0, 4) : withoutPrefix;
+}
+
+function resolvedEntryYear(input: {
+  entryYear?: string | null;
+  studentCode?: string | null;
+}): string {
+  const studentCode = input.studentCode?.trim();
+  if (studentCode) return normalizeEntryYear(studentCode);
+  return normalizeEntryYear(input.entryYear ?? "");
+}
+
 function shouldRetryAPNs(status: number): boolean {
   return status === 429 || status >= 500;
 }
@@ -259,7 +276,7 @@ function registrationFromRow(row: RegistrationRow): StoredRegistration {
     pushStartToken: row.push_start_token,
     sandbox: decodeBool(row.sandbox),
     track: row.track,
-    entryYear: row.entry_year,
+    entryYear: resolvedEntryYear({ entryYear: row.entry_year }),
     schedule: decodeJSON<Record<string, ClassPeriod[]>>(row.schedule_json) ?? {},
     paused: decodeBool(row.paused),
     resumeDate: row.resume_date ?? undefined,
@@ -399,6 +416,7 @@ async function putRegistration(
   deviceId: string,
   reg: StoredRegistration
 ): Promise<void> {
+  const normalizedEntryYear = resolvedEntryYear({ entryYear: reg.entryYear });
   await env.OUTSPIRE_DB.prepare(`
     INSERT INTO registrations (
       device_id,
@@ -428,7 +446,7 @@ async function putRegistration(
       reg.pushStartToken,
       encodeBool(reg.sandbox),
       reg.track,
-      reg.entryYear,
+      normalizedEntryYear,
       JSON.stringify(reg.schedule),
       encodeBool(reg.paused),
       reg.resumeDate ?? null,
@@ -647,7 +665,11 @@ function specialDayApplies(
   entryYear: string
 ): boolean {
   const trackMatch = sd.track === "all" || sd.track === track;
-  const gradeMatch = sd.grades.includes("all") || sd.grades.includes(entryYear);
+  const normalizedEntryYear = normalizeEntryYear(entryYear);
+  const gradeMatch =
+    sd.grades.includes("all") ||
+    sd.grades.includes(entryYear) ||
+    sd.grades.includes(normalizedEntryYear);
   return trackMatch && gradeMatch;
 }
 
@@ -1232,7 +1254,7 @@ async function handleRegister(request: Request, env: Env): Promise<Response> {
     pushStartToken: body.pushStartToken,
     sandbox: body.sandbox ?? false,
     track: body.track,
-    entryYear: body.entryYear,
+    entryYear: resolvedEntryYear(body),
     schedule: body.schedule,
     paused: existing?.paused ?? false,
     resumeDate: existing?.resumeDate,

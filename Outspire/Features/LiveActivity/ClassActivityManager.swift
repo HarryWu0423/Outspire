@@ -432,6 +432,7 @@ final class ClassActivityManager: ObservableObject {
 
         PushRegistrationService.register(
             pushStartToken: startToken,
+            studentCode: userCode,
             studentInfo: studentInfo,
             timetable: timetable
         ) { [weak self] success in

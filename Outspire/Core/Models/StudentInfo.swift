@@ -9,13 +9,16 @@ struct StudentInfo {
         case ibdp, alevel
     }
 
-    /// Parse WFLA student code: "20238123" -> entry year 2023, class 1, IBDP
+    /// Parse WFLA student code: "20238123" / "s20238123" -> entry year 2023, class 1, IBDP
     /// Format: [4 digits year][1 ignored][1 class number][2 seat number]
     init?(userCode: String) {
-        guard userCode.count >= 6 else { return nil }
-        self.entryYear = String(userCode.prefix(4))
-        let classIndex = userCode.index(userCode.startIndex, offsetBy: 5)
-        guard let num = Int(String(userCode[classIndex])), num >= 1, num <= 9 else { return nil }
+        let normalizedCode = userCode.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "s", with: "", options: [.caseInsensitive, .anchored])
+        guard normalizedCode.count >= 6 else { return nil }
+
+        self.entryYear = String(normalizedCode.prefix(4))
+        let classIndex = normalizedCode.index(normalizedCode.startIndex, offsetBy: 5)
+        guard let num = Int(String(normalizedCode[classIndex])), num >= 1, num <= 9 else { return nil }
         self.classNumber = num
         self.track = num >= 7 ? .alevel : .ibdp
     }

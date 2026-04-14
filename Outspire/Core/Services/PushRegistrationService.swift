@@ -35,6 +35,7 @@ enum PushRegistrationService {
         let sandbox: Bool
         let track: String
         let entryYear: String
+        let studentCode: String?
         let schedule: [String: [Period]]
 
         struct Period: Encodable {
@@ -63,6 +64,7 @@ enum PushRegistrationService {
 
     static func register(
         pushStartToken: String,
+        studentCode: String,
         studentInfo: StudentInfo,
         timetable: [[String]],
         completion: ((Bool) -> Void)? = nil
@@ -75,6 +77,7 @@ enum PushRegistrationService {
             sandbox: isSandbox,
             track: studentInfo.track.rawValue,
             entryYear: studentInfo.entryYear,
+            studentCode: studentCode,
             schedule: schedule
         )
 
