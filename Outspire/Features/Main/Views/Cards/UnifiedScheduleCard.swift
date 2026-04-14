@@ -336,16 +336,18 @@ private struct UnifiedScheduleRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            // Colored dot indicator
-            Circle()
-                .fill(subjectColor)
-                .frame(width: 6, height: 6)
+            // Colored dot indicator (only show for non-self-study)
+            if !item.info.isSelfStudy {
+                Circle()
+                    .fill(subjectColor)
+                    .frame(width: 6, height: 6)
+            }
 
             VStack(alignment: .leading, spacing: isActive ? 6 : 3) {
                 // Subject name
                 Text(item.info.subject ?? (item.info.isSelfStudy ? "Self-Study" : "Class"))
                     .font(isActive ? .body.weight(.bold) : .subheadline.weight(.semibold))
-                    .foregroundColor(isPast ? .secondary : (item.info.isSelfStudy ? .purple : .primary))
+                    .foregroundColor(isPast ? .secondary : .primary)
 
                 // Metadata line
                 Text(item.info.isSelfStudy && !isActive ? timeRange : metadataLine)
