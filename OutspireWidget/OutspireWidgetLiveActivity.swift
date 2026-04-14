@@ -70,6 +70,29 @@ private func progress(for state: DisplayState, at date: Date) -> Double {
     return min(max(elapsed / total, 0), 1)
 }
 
+private struct TimeProgressBar: View {
+    let state: DisplayState
+
+    var body: some View {
+        ZStack {
+            Capsule()
+                .fill(.white.opacity(0.08))
+                .frame(height: 3)
+
+            // Use ActivityKit's time-driven ProgressView for the linear bar so it
+            // advances with the current range without relying on TimelineView to
+            // re-layout the lock screen presentation.
+            ProgressView(timerInterval: state.rangeStart ... state.rangeEnd, countsDown: false)
+                .progressViewStyle(.linear)
+                .tint(stateColor(for: state))
+                .labelsHidden()
+                .frame(height: 3)
+                .clipShape(Capsule())
+        }
+        .frame(height: 3)
+    }
+}
+
 private struct StaleView: View {
     var body: some View {
         HStack {
@@ -127,23 +150,9 @@ private struct LockScreenView: View {
 
                 Spacer(minLength: 0)
 
-                TimelineView(.periodic(from: .now, by: 10)) { timeline in
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule()
-                                .fill(.white.opacity(0.08))
-                                .frame(height: 3)
-
-                            Capsule()
-                                .fill(stateColor(for: state))
-                                .frame(
-                                    width: geo.size.width * progress(for: state, at: timeline.date),
-                                    height: 3
-                                )
-                        }
-                    }
-                    .frame(height: 3)
-                }
+                // Keep the original layout metrics and only swap the fill logic
+                // to the system's time-based progress rendering.
+                TimeProgressBar(state: state)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
@@ -245,25 +254,11 @@ struct OutspireWidgetLiveActivity: Widget {
                 }
 
                 DynamicIslandExpandedRegion(.bottom) {
-                    TimelineView(.periodic(from: .now, by: 30)) { timeline in
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                Capsule()
-                                    .fill(.white.opacity(0.08))
-                                    .frame(height: 3)
-
-                                Capsule()
-                                    .fill(stateColor(for: state))
-                                    .frame(
-                                        width: geo.size.width * progress(for: state, at: timeline.date),
-                                        height: 3
-                                    )
-                            }
-                        }
-                        .frame(height: 3)
+                    // Match the lock screen bar behavior without changing spacing
+                    // or sizing in the expanded island.
+                    TimeProgressBar(state: state)
                         .padding(.horizontal, 10)
                         .padding(.top, 4)
-                    }
                 }
             } compactLeading: {
                 CompactLeadingView(state: state)
