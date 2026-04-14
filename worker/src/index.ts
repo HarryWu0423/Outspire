@@ -101,6 +101,7 @@ interface PushJob {
   payload: Record<string, unknown>;
   kind: JobKind;
   dayKey: string;
+  attempts: number;
 }
 
 interface DayDecision {
@@ -151,11 +152,13 @@ interface DispatchJobRow {
   push_type: "liveactivity";
   topic: string;
   payload_json: string;
+  attempts: number;
 }
 
 const APPLE_REFERENCE_DATE = 978307200;
 const REG_TTL = 30 * 24 * 60 * 60;
 const REGISTRATION_RETENTION_SECONDS = REG_TTL;
+const MAX_RETRY_ATTEMPTS = 2;
 
 let storageReadyPromise: Promise<void> | null = null;
 
@@ -207,6 +210,12 @@ function subtractMinutes(timeStr: string, minutes: number): string {
   return formatTime(Math.floor(clamped / 60), clamped % 60);
 }
 
+function addMinutes(timeStr: string, minutes: number): string | null {
+  const total = minutesFor(timeStr) + minutes;
+  if (total > 23 * 60 + 59) return null;
+  return formatTime(Math.floor(total / 60), total % 60);
+}
+
 function isAuthorized(request: Request, env: Env): boolean {
   return request.headers.get("x-auth-secret") === env.APNS_AUTH_SECRET;
 }
@@ -237,6 +246,14 @@ function decodeBool(value: number | string | null | undefined): boolean {
   return Number(value ?? 0) === 1;
 }
 
+function shouldRetryAPNs(status: number): boolean {
+  return status === 429 || status >= 500;
+}
+
+function retryDelayMinutes(attempts: number): number {
+  return attempts === 0 ? 1 : 2;
+}
+
 function registrationFromRow(row: RegistrationRow): StoredRegistration {
   return {
     pushStartToken: row.push_start_token,
@@ -260,6 +277,7 @@ function dispatchJobFromRow(row: DispatchJobRow): PushJob {
     payload: decodeJSON<Record<string, unknown>>(row.payload_json) ?? {},
     kind: row.kind,
     dayKey: row.day_key,
+    attempts: Number(row.attempts ?? 0),
   };
 }
 
@@ -301,6 +319,7 @@ async function initializeStorage(env: Env): Promise<void> {
         push_type TEXT NOT NULL,
         topic TEXT NOT NULL,
         payload_json TEXT NOT NULL,
+        attempts INTEGER NOT NULL DEFAULT 0,
         updated_at INTEGER NOT NULL,
         PRIMARY KEY (day_key, time, device_id, kind)
       )
@@ -314,6 +333,19 @@ async function initializeStorage(env: Env): Promise<void> {
       ON dispatch_jobs(day_key, device_id)
     `),
   ]);
+
+  try {
+    await env.OUTSPIRE_DB.prepare(`
+      ALTER TABLE dispatch_jobs
+      ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0
+    `).run();
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+    if (!message.includes("duplicate column name")) {
+      throw error;
+    }
+  }
 }
 
 async function getRegistration(
@@ -428,6 +460,7 @@ async function fetchDispatchJobsForSlot(
       push_type,
       topic,
       payload_json
+      ,attempts
     FROM dispatch_jobs
     WHERE day_key = ? AND time = ?
     ORDER BY device_id, kind
@@ -456,14 +489,16 @@ async function writeJobsForToday(
         push_type,
         topic,
         payload_json,
+        attempts,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(day_key, time, device_id, kind) DO UPDATE SET
         token = excluded.token,
         sandbox = excluded.sandbox,
         push_type = excluded.push_type,
         topic = excluded.topic,
         payload_json = excluded.payload_json,
+        attempts = excluded.attempts,
         updated_at = excluded.updated_at
     `).bind(
       job.dayKey,
@@ -475,6 +510,7 @@ async function writeJobsForToday(
       job.pushType,
       job.topic,
       JSON.stringify(job.payload),
+      job.attempts,
       nowUnix()
     )
   );
@@ -868,6 +904,7 @@ function buildStartJob(
         },
       },
     },
+    attempts: 0,
   };
 }
 
@@ -895,6 +932,7 @@ function buildUpdateJob(
         "stale-date": staleDateUnix,
       },
     },
+    attempts: 0,
   };
 }
 
@@ -923,6 +961,7 @@ function buildEndJob(
         "dismissal-date": dismissalDate,
       },
     },
+    attempts: 0,
   };
 }
 
@@ -1098,6 +1137,7 @@ async function handleMinuteDispatch(env: Env): Promise<void> {
 
   const config = apnsConfig(env);
   const remaining: PushJob[] = [];
+  const retries: Array<{ time: string; job: PushJob }> = [];
 
   for (const job of jobs) {
     const reg = await getRegistration(env, job.deviceId);
@@ -1130,11 +1170,23 @@ async function handleMinuteDispatch(env: Env): Promise<void> {
       console.error(
         `APNs push failed for device ${job.deviceId}: ${result.status} ${result.body}`
       );
-      if (result.status !== 410) {
-        remaining.push(job);
-      } else {
+      if (result.status === 410) {
         await deleteRegistration(env, job.deviceId);
         await removePendingJobsForDevice(env, job.deviceId, dayKey);
+      } else if (
+        shouldRetryAPNs(result.status) &&
+        job.attempts < MAX_RETRY_ATTEMPTS
+      ) {
+        const retryTime = addMinutes(slotTime, retryDelayMinutes(job.attempts));
+        if (retryTime) {
+          retries.push({
+            time: retryTime,
+            job: {
+              ...job,
+              attempts: job.attempts + 1,
+            },
+          });
+        }
       }
       continue;
     }
@@ -1161,6 +1213,9 @@ async function handleMinuteDispatch(env: Env): Promise<void> {
   }
 
   await replaceDispatchJobsForSlot(env, dayKey, slotTime, remaining);
+  if (retries.length > 0) {
+    await writeJobsForToday(env, retries);
+  }
 }
 
 async function handleRegister(request: Request, env: Env): Promise<Response> {

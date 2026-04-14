@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS dispatch_jobs (
   push_type TEXT NOT NULL,
   topic TEXT NOT NULL,
   payload_json TEXT NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0,
   updated_at INTEGER NOT NULL,
   PRIMARY KEY (day_key, time, device_id, kind)
 );
