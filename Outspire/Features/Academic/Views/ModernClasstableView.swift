@@ -59,6 +59,12 @@ struct ModernClasstableView: View {
                                     currentDate: context.date
                                 )
                             }
+
+                            if period.number == 4 {
+                                Divider()
+                                    .background(Color.gray.opacity(0.3))
+                                    .padding(.top, 4)
+                            }
                         }
                     }
                     .padding(.horizontal)
