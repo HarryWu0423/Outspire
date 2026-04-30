@@ -136,4 +136,9 @@ enum Configuration {
     // static func resetAIDisclaimers() {
     //    DisclaimerManager.shared.resetDisclaimers()
     // }
+
+    // Push worker auth secret for APNS registration
+    static var pushWorkerAuthSecret: String {
+        return ""
+    }
 }
